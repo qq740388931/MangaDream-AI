@@ -1,0 +1,39 @@
+# Maven
+target/
+pom.xml.tag
+pom.releaseBackup
+*.jar
+*.war
+*.ear
+*.class
+
+# IDE
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+*.swp
+*.swo
+
+# Logs & temp
+*.log
+*.tmp
+.DS_Store
+Thumbs.db
+
+# Local DB (optional: remove if you want to commit seed data)
+*.db
+*.db-journal
+
+# Node / frontend
+frontend/node_modules/
+frontend/dist/
+npm-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Env / secrets (do not commit tokens)
+.env
+.env.local
+*.local

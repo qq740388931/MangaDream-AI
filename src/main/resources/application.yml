@@ -1,0 +1,15 @@
+# MangaDream-AI 后端配置（端口 8080）
+server:
+  port: 8080
+
+spring:
+  application:
+    name: MangaDream-AI
+  datasource:
+    url: jdbc:sqlite:./data/mangadream.db
+    driver-class-name: org.sqlite.JDBC
+
+# Raphael 轮询/提交用的 Cookie（可选，不配则随机生成接口返回 503）
+app:
+  raphael:
+    bearer-token: cf_clearance=ksMwj99XaYdoQYs7QXJoorbPUJB_IEG4wDBzFMCD8_Y-1773334548-1.2.1.1-qRCUX5iC7z4xjjVMHo9DZxvwYlZEK9SnECs7NCM9eAorXdUZH1pCZkPf2MavggP0vhZIuWU8O5WynoCMgx.l0NSspxQNetbdJmMHHS0IeI9C4lxu7ShZC8YbPMxu9xtwJZbccBjscPZCnGqlq8Kgrb7wkAiYVExSNgNyIVmGQFMcz0.7JiYP42DNgbh7YZHzTxaWBAk2KMdcydUn_EkMZssbcEoxz9JKOQTGcNHAXvI; g_state={"i_l":0,"i_ll":1773334648242,"i_e":{"enable_itp_optimization":0}}; __Secure-better-auth.session_token=F3hqWIRoQp5Bsap7HAJk28fhkTeyaJhW.spE53BRc%2Fjh2mooNGVQSdFEpilPzW0SwugMob2Y%2Fe60%3D

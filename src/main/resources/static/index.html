@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MangaDream AI - AI 图像生成</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="page-wrap">
+    <header class="header">
+      <h1 class="header__title">MangaDream AI</h1>
+      <p class="header__subtitle">Become the Anime Hero, Instantly.</p>
+      <div class="header__tags">
+        <span class="tag">无需登录</span>
+        <span class="tag">多风格支持</span>
+        <span class="tag">极速生成</span>
+      </div>
+    </header>
+
+    <section class="generator">
+      <p class="generator__intro">照片给我，帮你穿越到你最爱的动漫世界里哟</p>
+      <div id="uploadRow" class="generator__row generator__row--upload">
+        <label class="upload-btn">
+          <input type="file" id="fileInput" accept="image/jpeg,image/png,image/webp" class="upload-btn__input" />
+          <span class="upload-btn__plus">+</span>
+          <span class="upload-btn__label">选择照片</span>
+        </label>
+        <span id="fileHint" class="file-hint">未选择照片</span>
+      </div>
+      <div id="uploadPreviewWrap" class="upload-preview" style="display: none;">
+        <img id="uploadPreviewImg" class="upload-preview__img" src="" alt="上传预览" />
+        <div class="upload-preview__actions">
+          <button type="button" id="btnReselect" class="btn btn--outline">重新选择</button>
+          <button type="button" id="btnRandom" class="btn btn--primary" title="随机生成一个符合角色的照片">随机生成</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="resultSection" class="result-section" style="display: none;">
+      <h2 class="result-section__title">生成结果</h2>
+      <div id="resultWrap" class="result-section__wrap"></div>
+    </section>
+
+    <section class="inspiration">
+      <h2 class="inspiration__title">选择你想要的风格</h2>
+      <p class="inspiration__desc">想给你变个魔法，你选个风格，我哔——的一下变出来！</p>
+      <div id="inspirationGrid" class="inspiration__grid"></div>
+    </section>
+  </div>
+
+  <div id="imagePreviewModal" class="image-preview-modal" style="display: none;" aria-hidden="true">
+    <div class="image-preview-modal__backdrop"></div>
+    <div class="image-preview-modal__box">
+      <button type="button" class="image-preview-modal__close" aria-label="关闭">×</button>
+      <a id="imagePreviewLink" href="" target="_blank" rel="noopener" download="mangadream-result.png">
+        <img id="imagePreviewImg" src="" alt="预览大图" />
+      </a>
+    </div>
+  </div>
+
+  <div id="confirmModal" class="modal" style="display: none;" aria-hidden="true">
+    <div class="modal__backdrop"></div>
+    <div class="modal__box">
+      <p class="modal__text">生成此风格图片？</p>
+      <div class="modal__actions">
+        <button type="button" id="modalCancel" class="btn btn--secondary">取消</button>
+        <button type="button" id="modalConfirm" class="btn btn--primary" onclick="typeof window.onConfirmGenerate=== 'function' && window.onConfirmGenerate()">确认</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
