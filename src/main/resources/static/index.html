@@ -5,12 +5,24 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>MangaDream AI - AI 图像生成</title>
   <link rel="stylesheet" href="styles.css" />
+  <!-- Google Identity Services，用于获取 Google id_token -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
   <div id="page-wrap">
     <header class="header">
-      <h1 class="header__title">MangaDream AI</h1>
-      <p class="header__subtitle">Become the Anime Hero, Instantly.</p>
+      <nav class="nav">
+        <a class="nav__link" href="/">首页</a>
+        <a class="nav__link" href="/feedback.html">意见</a>
+        <a class="nav__link" href="/vip.html">会员</a>
+      </nav>
+      <div class="header__top">
+        <div class="header__brand">
+          <h1 class="header__title">MangaDream AI</h1>
+          <p class="header__subtitle">Become the Anime Hero, Instantly.</p>
+        </div>
+        <div id="userInfo" class="header-user"></div>
+      </div>
       <div class="header__tags">
         <span class="tag">无需登录</span>
         <span class="tag">多风格支持</span>
@@ -33,6 +45,10 @@
         <div class="upload-preview__actions">
           <button type="button" id="btnReselect" class="btn btn--outline">重新选择</button>
           <button type="button" id="btnRandom" class="btn btn--primary" title="随机生成一个符合角色的照片">随机生成</button>
+        </div>
+        <div id="loadingIndicator" class="loading-indicator" style="display: none;">
+          <span class="loading-indicator__spinner"></span>
+          <span class="loading-indicator__text">正在生成中，请稍等...</span>
         </div>
       </div>
     </section>
@@ -66,6 +82,22 @@
       <div class="modal__actions">
         <button type="button" id="modalCancel" class="btn btn--secondary">取消</button>
         <button type="button" id="modalConfirm" class="btn btn--primary" onclick="typeof window.onConfirmGenerate=== 'function' && window.onConfirmGenerate()">确认</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="loginModal" class="modal" style="display: none;" aria-hidden="true">
+    <div class="modal__backdrop"></div>
+    <div class="modal__box">
+      <h3 class="login-modal__title">登录后继续使用</h3>
+      <p class="login-modal__desc">你已经体验了 2 次免费生成，登录后可继续使用全部功能。</p>
+      <div style="margin-bottom: 16px;">
+        <button type="button" id="googleLoginBtn" class="login-modal__google-btn">
+          <span>使用 Google 登录</span>
+        </button>
+      </div>
+      <div class="modal__actions">
+        <button type="button" id="loginCloseBtn" class="btn btn--secondary">关闭</button>
       </div>
     </div>
   </div>

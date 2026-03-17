@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MangaDream AI - 会员</title>
+  <link rel="stylesheet" href="styles.css" />
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body>
+  <div id="page-wrap">
+    <header class="header">
+      <nav class="nav">
+        <a class="nav__link" href="/">首页</a>
+        <a class="nav__link" href="/feedback.html">意见</a>
+        <a class="nav__link" href="/vip.html">会员</a>
+      </nav>
+      <div class="header__top">
+        <div class="header__brand">
+          <h1 class="header__title">MangaDream AI</h1>
+          <p class="header__subtitle">Become the Anime Hero, Instantly.</p>
+        </div>
+        <div id="userInfo" class="header-user"></div>
+      </div>
+    </header>
+
+    <section class="generator">
+      <h2 class="result-section__title" style="text-align:center;margin-bottom:16px;">
+        开通会员享受每月 1000 积分优惠
+      </h2>
+      <p class="generator__intro" style="max-width:640px;margin-top:0;">
+        会员每月会自动获得 1000 积分，可用于 MangaDream AI 的风格生成与随机生成。<br/>
+        当前页面只是占位展示，具体开通与支付逻辑可以根据后续需求再接入。
+      </p>
+      <div style="width:100%;max-width:480px;margin-top:12px;">
+        <label for="vipEmail" style="font-size:14px;color:#e0e0e0;display:block;margin-bottom:6px;">
+          请输入用于接收 PayPal 账单的邮箱
+        </label>
+        <input id="vipEmail"
+               type="email"
+               placeholder="例如：you@example.com"
+               style="width:100%;padding:10px;border-radius:8px;border:1px solid #444;background:#1f1f1f;color:#f0f0f0;box-sizing:border-box;" />
+        <div style="margin-top:12px;display:flex;justify-content:flex-end;">
+          <button type="button" id="btnVipSubmit" class="btn btn--primary">提交开通申请</button>
+        </div>
+        <p style="margin-top:8px;font-size:12px;color:#a0a0a0;line-height:1.5;">
+          提交后，我们会通过你填写的邮箱发送 PayPal 账单链接。你完成支付后，我们会为你的账号开通会员，并发放本月 1000 积分。
+        </p>
+      </div>
+    </section>
+  </div>
+
+  <div id="loginModal" class="modal" style="display: none;" aria-hidden="true"></div>
+
+  <script src="app.js"></script>
+  <script src="vip.js"></script>
+</body>
+</html>
+

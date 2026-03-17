@@ -19,7 +19,7 @@ html, body {
   max-width: 1200px;
   margin-left: auto;
   margin-right: auto;
-  padding: 24px 16px;
+  padding: 0 16px 24px;
   display: flex;
   flex-direction: column;
   align-items: stretch;
@@ -29,8 +29,16 @@ html, body {
 /* ---------- 1. 顶部标题区 ---------- */
 .header {
   margin-bottom: 48px;
-  margin-top: 48px;
-  padding-top: 24px;
+  margin-top: 0;
+  padding-top: 0;
+}
+
+.header__top {
+  position: relative;
+}
+
+.header__brand {
+  text-align: center;
 }
 
 .header__title {
@@ -54,6 +62,7 @@ html, body {
   gap: 8px;
   align-items: center;
   justify-content: center;
+  margin-top: 12px;
 }
 
 .tag {
@@ -63,6 +72,104 @@ html, body {
   color: #fff;
   font-size: 14px;
   border-radius: 2px;
+}
+
+.nav {
+  margin-top: 4px;
+  margin-bottom: 32px;
+  display: flex;
+  justify-content: center;
+  gap: 32px;
+}
+
+.nav__link {
+  color: #ffe9b3;
+  font-size: 32px;
+  text-decoration: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+}
+
+.nav__link:hover {
+  background-color: #333;
+}
+
+.header-user {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  position: absolute;
+  top: 0;
+  right: 0;
+}
+
+.header-user__login-btn {
+  height: 32px;
+  padding: 0 12px;
+  font-size: 13px;
+}
+
+.header-user__avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  object-fit: cover;
+  border: 1px solid #444;
+}
+
+.header-user__name {
+  font-size: 14px;
+  color: #e0e0e0;
+  max-width: 120px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.header-user__popover {
+  position: absolute;
+  top: 40px;
+  right: 0;
+  padding: 8px 0;
+  background-color: #242424;
+  border-radius: 8px;
+  border: 1px solid #444;
+  font-size: 13px;
+  color: #e0e0e0;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  min-width: 160px;
+  z-index: 1002;
+}
+
+.header-user__popover-item {
+  padding: 6px 14px;
+  white-space: nowrap;
+}
+
+.header-user__popover-item--muted {
+  color: #bbbbbb;
+  font-size: 12px;
+}
+
+.header-user__popover-divider {
+  height: 1px;
+  margin: 4px 0;
+  background-color: #333;
+}
+
+.header-user__logout-btn {
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: none;
+  color: #e0e0e0;
+  font-size: 13px;
+  padding: 6px 14px;
+  cursor: pointer;
+}
+
+.header-user__logout-btn:hover {
+  background-color: #333;
 }
 
 /* ---------- 2. 顶部上传区（卡片） ---------- */
@@ -210,6 +317,35 @@ html, body {
 }
 
 .btn--primary:hover { background-color: #4338ca; }
+
+.btn[disabled] {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.loading-indicator {
+  margin-top: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #d0d0d0;
+}
+
+.loading-indicator__spinner {
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-top-color: #ff9933;
+  animation: mangadream-spin 0.7s linear infinite;
+}
+
+@keyframes mangadream-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
 
 .generator__actions {
   display: flex;
@@ -420,6 +556,38 @@ html, body {
   display: flex;
   gap: 12px;
   justify-content: flex-end;
+}
+
+/* ---------- 登录弹窗 ---------- */
+.login-modal__title {
+  margin: 0 0 12px 0;
+  font-size: 18px;
+  font-weight: bold;
+}
+
+.login-modal__desc {
+  margin: 0 0 16px 0;
+  font-size: 14px;
+  color: #c0c0c0;
+}
+
+.login-modal__google-btn {
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background-color: #fff;
+  color: #333;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.login-modal__google-btn:hover {
+  background-color: #f3f3f3;
 }
 
 /* ---------- 响应式 ---------- */

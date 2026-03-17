@@ -1,6 +1,7 @@
 package com.example.imagetool.controller;
 
 import com.example.imagetool.common.Result;
+import com.example.imagetool.repository.UserRepository;
 import com.example.imagetool.service.StyleService;
 import com.example.imagetool.utilitys.TaskSubmitResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 
+import javax.servlet.http.HttpServletRequest;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -46,9 +48,11 @@ public class GenerateController {
     private String bearerToken;
 
     private final StyleService styleService;
+    private final UserRepository userRepository;
 
-    public GenerateController(StyleService styleService) {
+    public GenerateController(StyleService styleService, UserRepository userRepository) {
         this.styleService = styleService;
+        this.userRepository = userRepository;
     }
 
     /**
@@ -57,12 +61,20 @@ public class GenerateController {
      * 根据 templateId 查对应风格的 prompt，提交到 Raphael，返回 historyId、pollIntervalMs 供前端轮询
      */
     @PostMapping("/generate")
-    public Result<Map<String, Object>> generate(@org.springframework.web.bind.annotation.RequestBody Map<String, Object> body) {
+    public Result<Map<String, Object>> generate(@org.springframework.web.bind.annotation.RequestBody Map<String, Object> body,
+                                                HttpServletRequest request) {
         String imageBase64 = body != null ? (String) body.get("imageBase64") : null;
         Object tid = body != null ? body.get("templateId") : null;
         int templateId = tid instanceof Number ? ((Number) tid).intValue() : (tid != null ? Integer.parseInt(tid.toString()) : 0);
         if (imageBase64 == null || imageBase64.isEmpty()) {
             return Result.error(400, "缺少 imageBase64");
+        }
+        Long userId = getUserIdFromRequest(request);
+        if (userId == null) {
+            return Result.error(401, "请先登录后再生成图片");
+        }
+        if (!userRepository.deductPoints(userId, 2)) {
+            return Result.error(402, "积分不足，每次生成消耗 2 点积分。每日 6 点会把低于 10 分的用户恢复到 10 分。");
         }
         String prompt = styleService.getPromptByStyleId(templateId);
         if (prompt == null || prompt.isEmpty()) {
@@ -76,14 +88,14 @@ public class GenerateController {
         try {
             String jsonBody = buildSubmitBody(imageBase64, prompt, width, height);
             RequestBody requestBody = RequestBody.create(MEDIA_TYPE_JSON, jsonBody);
-            Request request = new Request.Builder()
+            Request raphaelRequest = new Request.Builder()
                     .url(RAPHAEL_SUBMIT_URL)
                     .post(requestBody)
                     .addHeader("Content-Type", "application/json")
                     .addHeader("Cookie", bearerToken)
                     .addHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36")
                     .build();
-            try (Response response = client.newCall(request).execute()) {
+            try (Response response = client.newCall(raphaelRequest).execute()) {
                 if (!response.isSuccessful() || response.body() == null) {
                     return Result.error(502, "Raphael 提交失败: " + response.code());
                 }
@@ -108,10 +120,18 @@ public class GenerateController {
      * 返回 historyId、pollIntervalMs 供前端轮询
      */
     @PostMapping("/generate-random")
-    public Result<Map<String, Object>> generateRandom(@org.springframework.web.bind.annotation.RequestBody Map<String, Object> body) {
+    public Result<Map<String, Object>> generateRandom(@org.springframework.web.bind.annotation.RequestBody Map<String, Object> body,
+                                                      HttpServletRequest request) {
         String imageBase64 = body != null ? (String) body.get("imageBase64") : null;
         if (imageBase64 == null || imageBase64.isEmpty()) {
             return Result.error(400, "缺少 imageBase64");
+        }
+        Long userId = getUserIdFromRequest(request);
+        if (userId == null) {
+            return Result.error(401, "请先登录后再生成图片");
+        }
+        if (!userRepository.deductPoints(userId, 2)) {
+            return Result.error(402, "积分不足，每次生成消耗 2 点积分。每日 6 点会把低于 10 分的用户恢复到 10 分。");
         }
         int width = body != null && body.get("width") != null ? ((Number) body.get("width")).intValue() : DEFAULT_WIDTH;
         int height = body != null && body.get("height") != null ? ((Number) body.get("height")).intValue() : DEFAULT_HEIGHT;
@@ -123,14 +143,14 @@ public class GenerateController {
         try {
             String jsonBody = buildSubmitBody(imageBase64, RANDOM_DEFAULT_PROMPT, width, height);
             RequestBody requestBody = RequestBody.create(MEDIA_TYPE_JSON, jsonBody);
-            Request request = new Request.Builder()
+            Request raphaelRequest = new Request.Builder()
                     .url(RAPHAEL_SUBMIT_URL)
                     .post(requestBody)
                     .addHeader("Content-Type", "application/json")
                     .addHeader("Cookie", bearerToken)
                     .addHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36")
                     .build();
-            try (Response response = client.newCall(request).execute()) {
+            try (Response response = client.newCall(raphaelRequest).execute()) {
                 if (!response.isSuccessful() || response.body() == null) {
                     return Result.error(502, "Raphael 提交失败: " + response.code());
                 }
@@ -247,5 +267,16 @@ public class GenerateController {
             return "webp";
         }
         return "jpg";
+    }
+
+    private Long getUserIdFromRequest(HttpServletRequest request) {
+        if (request == null) {
+            return null;
+        }
+        String token = request.getHeader("X-Session-Token");
+        if (token == null || token.isEmpty()) {
+            return null;
+        }
+        return userRepository.findUserIdByToken(token);
     }
 }

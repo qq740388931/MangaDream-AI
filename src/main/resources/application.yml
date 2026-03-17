@@ -12,4 +12,16 @@ spring:
 # Raphael 轮询/提交用的 Cookie（可选，不配则随机生成接口返回 503）
 app:
   raphael:
-    bearer-token: cf_clearance=ksMwj99XaYdoQYs7QXJoorbPUJB_IEG4wDBzFMCD8_Y-1773334548-1.2.1.1-qRCUX5iC7z4xjjVMHo9DZxvwYlZEK9SnECs7NCM9eAorXdUZH1pCZkPf2MavggP0vhZIuWU8O5WynoCMgx.l0NSspxQNetbdJmMHHS0IeI9C4lxu7ShZC8YbPMxu9xtwJZbccBjscPZCnGqlq8Kgrb7wkAiYVExSNgNyIVmGQFMcz0.7JiYP42DNgbh7YZHzTxaWBAk2KMdcydUn_EkMZssbcEoxz9JKOQTGcNHAXvI; g_state={"i_l":0,"i_ll":1773334648242,"i_e":{"enable_itp_optimization":0}}; __Secure-better-auth.session_token=F3hqWIRoQp5Bsap7HAJk28fhkTeyaJhW.spE53BRc%2Fjh2mooNGVQSdFEpilPzW0SwugMob2Y%2Fe60%3D
+    bearer-token: g_state={"i_l":0,"i_ll":1773334648242,"i_e":{"enable_itp_optimization":0}}; __Secure-better-auth.session_token=uQ0VLOUaDbgzdW1D4wua9PY8cObPCrBI.3Wj5tTfa3dr%2BoicCSZwptkx9vNdYSQyGJy8%2BOead%2ByU%3D; cf_clearance=84_kNJi2ceNcoKg_Fit_3Yvvzkcr8Y.2.96_LtawYbI-1773772109-1.2.1.1-kr1IwRVmLOvjn.tqAOnq5uXjkARVLj4JE6YSA44xdiWaJdhIjpYPKUNkDV0Iwu7sU6hRmjNwYMzoL7UkvEe.3VKE2NxS1vXld66ypk0HF0lS9VNTzP8rakx4Rlgfeo5IOhyzHPyCNJy_AYqaZJ2snx8Uv8M.2lfVIjVIariflbihyUYxH88leQwtikdMp3Z7N0gIWQ9ubGT4IR4M5VitDhNqCj3rsRWMAhP0cgDhU_LRT1.xYmnQxHWGPL4hgbvL.WyhJjcNGk4xC4d1k16WSwUMvvqe_fda3VPeiCO.TM1IG48MBsC2dFy_sz39POSHk8g89wC_fWzMvXq0fVKETw
+  google:
+    client-id: 1047046505874-3qj543ddivppa34lag0a6k0u9od7stnk.apps.googleusercontent.com
+  # 如果运行环境在国内，需要通过 HTTP 代理访问 Google，
+  # 可在这里配置代理地址（例如 Clash/Clash Verge 的本地 HTTP 端口）；
+  # 部署到能直连 Google 的海外服务器时，可以留空。
+  proxy:
+    host: ""
+    port: 0
+  auth:
+    dev-enabled: true
+    dev-email: 740388931@qq.com
+    dev-name: "Local Dev User"

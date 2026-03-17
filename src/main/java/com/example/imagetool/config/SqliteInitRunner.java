@@ -49,9 +49,76 @@ public class SqliteInitRunner implements ApplicationRunner {
                         "updated_at TEXT" +
                         ")"
         );
+
+        jdbcTemplate.execute(
+                "CREATE TABLE IF NOT EXISTS users (" +
+                        "id INTEGER PRIMARY KEY AUTOINCREMENT," +
+                        "google_sub TEXT NOT NULL UNIQUE," +
+                        "email TEXT," +
+                        "name TEXT," +
+                        "avatar_url TEXT," +
+                        "created_at TEXT," +
+                        "last_login_at TEXT," +
+                        "points INTEGER," +
+                        "is_vip INTEGER," +
+                        "vip_expire_at TEXT" +
+                        ")"
+        );
+
+        jdbcTemplate.execute(
+                "CREATE TABLE IF NOT EXISTS user_session (" +
+                        "token TEXT PRIMARY KEY," +
+                        "user_id INTEGER NOT NULL," +
+                        "created_at TEXT," +
+                        "last_used_at TEXT," +
+                        "FOREIGN KEY(user_id) REFERENCES users(id)" +
+                        ")"
+        );
+
+        jdbcTemplate.execute(
+                "CREATE TABLE IF NOT EXISTS feedback (" +
+                        "id INTEGER PRIMARY KEY AUTOINCREMENT," +
+                        "username TEXT," +
+                        "email TEXT," +
+                        "content TEXT NOT NULL," +
+                        "created_at TEXT NOT NULL" +
+                        ")"
+        );
+
+        jdbcTemplate.execute(
+                "CREATE TABLE IF NOT EXISTS membership_request (" +
+                        "id INTEGER PRIMARY KEY AUTOINCREMENT," +
+                        "user_id INTEGER," +
+                        "username TEXT," +
+                        "email TEXT," +
+                        "plan_code TEXT," +
+                        "status TEXT," +
+                        "created_at TEXT," +
+                        "updated_at TEXT," +
+                        "admin_comment TEXT," +
+                        "FOREIGN KEY(user_id) REFERENCES users(id)" +
+                        ")"
+        );
+
+        // 尝试给旧的 users 表增加 points 列（如已存在会抛错，忽略即可）
+        try {
+            jdbcTemplate.execute("ALTER TABLE users ADD COLUMN points INTEGER");
+        } catch (Exception ignored) {
+        }
+        try {
+            jdbcTemplate.execute("ALTER TABLE users ADD COLUMN is_vip INTEGER");
+        } catch (Exception ignored) {
+        }
+        try {
+            jdbcTemplate.execute("ALTER TABLE users ADD COLUMN vip_expire_at TEXT");
+        } catch (Exception ignored) {
+        }
     }
 
     private void seedDataIfEmpty() {
+        // 确保已有用户至少有 10 积分
+        jdbcTemplate.update("UPDATE users SET points = 10 WHERE points IS NULL OR points < 10");
+
         Integer count = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM inspiration_template", Integer.class);
         if (count == null || count > 0) {
             return;
