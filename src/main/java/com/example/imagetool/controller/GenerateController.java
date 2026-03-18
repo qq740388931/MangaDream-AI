@@ -82,33 +82,11 @@ public class GenerateController {
         }
         int width = body != null && body.get("width") != null ? ((Number) body.get("width")).intValue() : DEFAULT_WIDTH;
         int height = body != null && body.get("height") != null ? ((Number) body.get("height")).intValue() : DEFAULT_HEIGHT;
-        if (bearerToken == null || bearerToken.isEmpty()) {
-            return Result.error(503, "未配置 app.raphael.bearer-token");
-        }
         try {
-            String jsonBody = buildSubmitBody(imageBase64, prompt, width, height);
-            RequestBody requestBody = RequestBody.create(MEDIA_TYPE_JSON, jsonBody);
-            Request raphaelRequest = new Request.Builder()
-                    .url(RAPHAEL_SUBMIT_URL)
-                    .post(requestBody)
-                    .addHeader("Content-Type", "application/json")
-                    .addHeader("Cookie", bearerToken)
-                    .addHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36")
-                    .build();
-            try (Response response = client.newCall(raphaelRequest).execute()) {
-                if (!response.isSuccessful() || response.body() == null) {
-                    return Result.error(502, "Raphael 提交失败: " + response.code());
-                }
-                String respStr = response.body().string();
-                TaskSubmitResponse parsed = mapper.readValue(respStr, TaskSubmitResponse.class);
-                if (!parsed.isSuccess() || parsed.getData() == null) {
-                    return Result.error(502, parsed.getMessage() != null ? parsed.getMessage() : "提交失败");
-                }
-                Map<String, Object> data = new HashMap<>();
-                data.put("historyId", parsed.getData().getHistoryId());
-                data.put("pollIntervalMs", parsed.getData().getPollIntervalMs());
-                return Result.success(data);
-            }
+            Map<String, Object> data = submitRaphaelTask(imageBase64, prompt, width, height);
+            return Result.success(data);
+        } catch (IllegalStateException e) {
+            return Result.error(503, e.getMessage());
         } catch (Exception e) {
             return Result.error(500, "提交异常: " + e.getMessage());
         }
@@ -136,36 +114,62 @@ public class GenerateController {
         int width = body != null && body.get("width") != null ? ((Number) body.get("width")).intValue() : DEFAULT_WIDTH;
         int height = body != null && body.get("height") != null ? ((Number) body.get("height")).intValue() : DEFAULT_HEIGHT;
 
-        if (bearerToken == null || bearerToken.isEmpty()) {
-            return Result.error(503, "未配置 app.raphael.bearer-token，请在 application.yml 中配置");
-        }
-
         try {
-            String jsonBody = buildSubmitBody(imageBase64, RANDOM_DEFAULT_PROMPT, width, height);
-            RequestBody requestBody = RequestBody.create(MEDIA_TYPE_JSON, jsonBody);
-            Request raphaelRequest = new Request.Builder()
-                    .url(RAPHAEL_SUBMIT_URL)
-                    .post(requestBody)
-                    .addHeader("Content-Type", "application/json")
-                    .addHeader("Cookie", bearerToken)
-                    .addHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36")
-                    .build();
-            try (Response response = client.newCall(raphaelRequest).execute()) {
-                if (!response.isSuccessful() || response.body() == null) {
-                    return Result.error(502, "Raphael 提交失败: " + response.code());
-                }
-                String respStr = response.body().string();
-                TaskSubmitResponse parsed = mapper.readValue(respStr, TaskSubmitResponse.class);
-                if (!parsed.isSuccess() || parsed.getData() == null) {
-                    return Result.error(502, parsed.getMessage() != null ? parsed.getMessage() : "提交失败");
-                }
-                Map<String, Object> data = new HashMap<>();
-                data.put("historyId", parsed.getData().getHistoryId());
-                data.put("pollIntervalMs", parsed.getData().getPollIntervalMs());
-                return Result.success(data);
-            }
+            Map<String, Object> data = submitRaphaelTask(imageBase64, RANDOM_DEFAULT_PROMPT, width, height);
+            return Result.success(data);
+        } catch (IllegalStateException e) {
+            return Result.error(503, e.getMessage());
         } catch (Exception e) {
             return Result.error(500, "提交异常: " + e.getMessage());
+        }
+    }
+
+    private Map<String, Object> submitRaphaelTask(String imageBase64, String prompt, int width, int height) throws Exception {
+        if (bearerToken == null || bearerToken.isEmpty()) {
+            throw new IllegalStateException("未配置 app.raphael.bearer-token，请在 application.yml 中配置");
+        }
+
+        String jsonBody = buildSubmitBody(imageBase64, prompt, width, height);
+        RequestBody requestBody = RequestBody.create(MEDIA_TYPE_JSON, jsonBody);
+
+        // 核心提交：统一由两个接口复用
+        Request raphaelRequest = new Request.Builder()
+                .url(RAPHAEL_SUBMIT_URL)
+                .post(requestBody)
+                // Referer / Origin
+                .addHeader("Referer", "https://raphael.app/zh")
+                .addHeader("Origin", "https://raphael.app")
+                // Cookie（application.yml 中配置完整 Cookie 串）
+                .addHeader("Cookie", bearerToken)
+                .addHeader("User-Agent", "Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36")
+
+                // 其他关键头（尽量贴近浏览器抓包）
+               // .addHeader("Accept-Encoding", "gzip, deflate, br, zstd")
+                .addHeader("Accept", "*/*")
+                .addHeader("Accept-Language", "zh-CN,zh;q=0.9")
+                .addHeader("Content-Type", "application/json")
+                .addHeader("sec-ch-ua", "\"Not:A-Brand\";v=\"99\", \"Google Chrome\";v=\"145\", \"Chromium\";v=\"145\"")
+                .addHeader("sec-ch-ua-mobile", "?1")
+                .addHeader("sec-ch-ua-platform", "\"Android\"")
+                .addHeader("sec-fetch-dest", "empty")
+                .addHeader("sec-fetch-mode", "cors")
+                .addHeader("sec-fetch-site", "same-origin")
+                .addHeader("Cache-Control", "no-cache")
+                .build();
+
+        try (Response response = client.newCall(raphaelRequest).execute()) {
+            if (!response.isSuccessful() || response.body() == null) {
+                throw new RuntimeException("Raphael 提交失败: " + response.code());
+            }
+            String respStr = response.body().string();
+            TaskSubmitResponse parsed = mapper.readValue(respStr, TaskSubmitResponse.class);
+            if (!parsed.isSuccess() || parsed.getData() == null) {
+                throw new RuntimeException(parsed.getMessage() != null ? parsed.getMessage() : "提交失败");
+            }
+            Map<String, Object> data = new HashMap<>();
+            data.put("historyId", parsed.getData().getHistoryId());
+            data.put("pollIntervalMs", parsed.getData().getPollIntervalMs());
+            return data;
         }
     }
 
