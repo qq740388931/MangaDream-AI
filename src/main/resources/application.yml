@@ -12,7 +12,7 @@ spring:
 # Raphael 轮询/提交用的 Cookie（可选，不配则随机生成接口返回 503）
 app:
   raphael:
-    bearer-token: g_state={"i_l":0,"i_ll":1773334648242,"i_e":{"enable_itp_optimization":0}}; __Secure-better-auth.session_token=uQ0VLOUaDbgzdW1D4wua9PY8cObPCrBI.3Wj5tTfa3dr%2BoicCSZwptkx9vNdYSQyGJy8%2BOead%2ByU%3D; cf_clearance=84_kNJi2ceNcoKg_Fit_3Yvvzkcr8Y.2.96_LtawYbI-1773772109-1.2.1.1-kr1IwRVmLOvjn.tqAOnq5uXjkARVLj4JE6YSA44xdiWaJdhIjpYPKUNkDV0Iwu7sU6hRmjNwYMzoL7UkvEe.3VKE2NxS1vXld66ypk0HF0lS9VNTzP8rakx4Rlgfeo5IOhyzHPyCNJy_AYqaZJ2snx8Uv8M.2lfVIjVIariflbihyUYxH88leQwtikdMp3Z7N0gIWQ9ubGT4IR4M5VitDhNqCj3rsRWMAhP0cgDhU_LRT1.xYmnQxHWGPL4hgbvL.WyhJjcNGk4xC4d1k16WSwUMvvqe_fda3VPeiCO.TM1IG48MBsC2dFy_sz39POSHk8g89wC_fWzMvXq0fVKETw
+    bearer-token: g_state={"i_l":0,"i_ll":1773842780593,"i_e":{"enable_itp_optimization":0},"i_b":"B8IGspeviOggmeu+KsD6JIi1ZZyy7fuChgnGwwOnqLg"}; __Secure-better-auth.session_token=k9WxWKVS5AGCyRl2Oxejqi9a581jEpUb.MKhsWO3HDOs8ePbttgB90xfhRcccXKx9%2B8O8YSPL7Fs%3D; cf_clearance=fWhbxM2Wtv9iE_Rlb.4555R8fFKZtrZNNY2ixpY6kSI-1773859455-1.2.1.1-TlGYXB6gubGk7aC2BNzDFJAK2yX8K5zC.zDfuZ9.2cLrzI0JfWwK6F9ssMUkr7Iq_mX_mGzeVgjH52rUKsujRc_5Pk5_6zGjaWEQ.73UBFYfcYBDProKwR8q1brhCXKvJD4DLr32h7p4YfmhoYCafD8Rwwx55XzTihUX.Z3pIgSWKstPjlJFWFj1DAZ0MxzxxEFp92QCNth4Tq9H.qWcS9_yngaTJGEZw8f0iYFAVcFBg80OWxbwuv7zjhMxZvAJoz9qh.24B9KsjQw6UrtFM9WbsFV3VzRwyKwPEcER7XbbGnc997rN9b0J7ZRhN4fuQjMzXAurCATVJ_rx.TmQQA
   google:
     client-id: 1047046505874-3qj543ddivppa34lag0a6k0u9od7stnk.apps.googleusercontent.com
   # 如果运行环境在国内，需要通过 HTTP 代理访问 Google，
