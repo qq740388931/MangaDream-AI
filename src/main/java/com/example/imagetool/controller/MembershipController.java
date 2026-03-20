@@ -28,7 +28,7 @@ public class MembershipController {
     public Result<Void> create(@RequestBody Map<String, Object> body, HttpServletRequest request) {
         String email = body != null ? (String) body.get("email") : null;
         if (email == null || email.trim().isEmpty()) {
-            return Result.error(400, "邮箱不能为空");
+            return Result.error(400, "系统繁忙请稍后再试");
         }
         String planCode = body != null ? (String) body.get("planCode") : null;
         if (planCode == null || planCode.trim().isEmpty()) {

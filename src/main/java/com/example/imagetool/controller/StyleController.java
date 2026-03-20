@@ -40,7 +40,7 @@ public class StyleController {
     public Result<StylePrompt> getPromptByStyleId(@PathVariable Integer styleId) {
         String prompt = styleService.getPromptByStyleId(styleId);
         if (prompt == null) {
-            return Result.error(404, "风格不存在");
+            return Result.error(404, "系统繁忙请稍后再试");
         }
         return Result.success(new StylePrompt(prompt));
     }

@@ -34,6 +34,7 @@ import java.util.concurrent.TimeUnit;
 public class AuthController {
 
     private static final String GOOGLE_TOKENINFO_URL = "https://oauth2.googleapis.com/tokeninfo?id_token=";
+    private static final String BUSY_MSG = "系统繁忙请稍后再试";
 
     private static final Logger log = LoggerFactory.getLogger(AuthController.class);
 
@@ -74,23 +75,23 @@ public class AuthController {
     @PostMapping("/google")
     public Result<Map<String, Object>> googleLogin(@RequestBody Map<String, Object> body) {
         if (googleClientId == null || googleClientId.isEmpty()) {
-            return Result.error(500, "未配置 app.google.client-id");
+            return Result.error(500, BUSY_MSG);
         }
         String idToken = body != null ? (String) body.get("idToken") : null;
         if (idToken == null || idToken.isEmpty()) {
-            return Result.error(400, "缺少 idToken");
+            return Result.error(400, BUSY_MSG);
         }
         try {
             log.info("开始校验 Google id_token，前 20 字符：{}", idToken.substring(0, Math.min(idToken.length(), 20)));
             Map<String, Object> tokenInfo = verifyIdToken(idToken);
             if (tokenInfo == null) {
                 log.warn("Google token 校验返回 null，可能是请求失败或响应体为空");
-                return Result.error(401, "Google token 校验失败");
+                return Result.error(401, BUSY_MSG);
             }
             String aud = stringValue(tokenInfo.get("aud"));
             if (!googleClientId.equals(aud)) {
                 log.warn("Google token aud 不匹配，期望={}, 实际={}", googleClientId, aud);
-                return Result.error(401, "Google token aud 不匹配");
+                return Result.error(401, BUSY_MSG);
             }
             String sub = stringValue(tokenInfo.get("sub"));
             String email = stringValue(tokenInfo.get("email"));
@@ -98,7 +99,7 @@ public class AuthController {
             String picture = stringValue(tokenInfo.get("picture"));
             if (sub == null || sub.isEmpty()) {
                 log.warn("Google token 中缺少 sub 字段，tokenInfo={}", tokenInfo);
-                return Result.error(401, "Google token 缺少 sub");
+                return Result.error(401, BUSY_MSG);
             }
 
             User user = userRepository.findByGoogleSub(sub);
@@ -123,7 +124,7 @@ public class AuthController {
             return Result.success(data);
         } catch (Exception e) {
             log.error("Google 登录异常", e);
-            return Result.error(500, "Google 登录异常: " + e.getMessage());
+            return Result.error(500, BUSY_MSG);
         }
     }
 
@@ -134,10 +135,10 @@ public class AuthController {
     @PostMapping("/dev-login")
     public Result<Map<String, Object>> devLogin() {
         if (!devEnabled) {
-            return Result.error(403, "dev login disabled");
+            return Result.error(403, BUSY_MSG);
         }
         if (devEmail == null || devEmail.isEmpty()) {
-            return Result.error(500, "未配置 app.auth.dev-email");
+            return Result.error(500, BUSY_MSG);
         }
         try {
             String sub = "dev-" + devEmail;
@@ -166,7 +167,7 @@ public class AuthController {
             return Result.success(data);
         } catch (Exception e) {
             log.error("dev 登录异常", e);
-            return Result.error(500, "dev 登录异常: " + e.getMessage());
+            return Result.error(500, BUSY_MSG);
         }
     }
 
