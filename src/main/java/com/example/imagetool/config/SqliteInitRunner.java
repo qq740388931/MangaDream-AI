@@ -100,6 +100,31 @@ public class SqliteInitRunner implements ApplicationRunner {
                         ")"
         );
 
+        jdbcTemplate.execute(
+                "CREATE TABLE IF NOT EXISTS generate_log (" +
+                        "id INTEGER PRIMARY KEY AUTOINCREMENT," +
+                        "user_id INTEGER," +
+                        "type TEXT," +
+                        "ip TEXT," +
+                        "user_agent TEXT," +
+                        "success INTEGER," +
+                        "reason TEXT," +
+                        "history_id TEXT," +
+                        "result_url TEXT," +
+                        "created_at TEXT," +
+                        "FOREIGN KEY(user_id) REFERENCES users(id)" +
+                        ")"
+        );
+
+        try {
+            jdbcTemplate.execute("ALTER TABLE generate_log ADD COLUMN history_id TEXT");
+        } catch (Exception ignored) {
+        }
+        try {
+            jdbcTemplate.execute("ALTER TABLE generate_log ADD COLUMN result_url TEXT");
+        } catch (Exception ignored) {
+        }
+
         // 尝试给旧的 users 表增加 points 列（如已存在会抛错，忽略即可）
         try {
             jdbcTemplate.execute("ALTER TABLE users ADD COLUMN points INTEGER");

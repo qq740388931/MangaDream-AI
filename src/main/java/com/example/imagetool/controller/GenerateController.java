@@ -2,6 +2,7 @@ package com.example.imagetool.controller;
 
 import com.example.imagetool.common.Result;
 import com.example.imagetool.repository.UserRepository;
+import com.example.imagetool.repository.GenerateLogRepository;
 import com.example.imagetool.service.StyleService;
 import com.example.imagetool.utilitys.TaskSubmitResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -16,6 +17,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.servlet.http.HttpServletRequest;
 import java.util.HashMap;
@@ -31,6 +34,8 @@ public class GenerateController {
 
     private static final String RAPHAEL_SUBMIT_URL = "https://raphael.app/api/ai-image-editor/task";
     private static final String RAPHAEL_HISTORY_URL = "https://raphael.app/api/history";
+    private static final String BUSY_MSG = "系统繁忙请稍后再试";
+    private static final Logger log = LoggerFactory.getLogger(GenerateController.class);
     private static final int DEFAULT_WIDTH = 683;
     private static final int DEFAULT_HEIGHT = 1024;
     private static final String RANDOM_DEFAULT_PROMPT = "帮我生成图片：[角色描述]，保持人物原型完全不变，全身/半身构图，如果人物原型缺少了脚和腿可以补充。\n" +
@@ -49,10 +54,14 @@ public class GenerateController {
 
     private final StyleService styleService;
     private final UserRepository userRepository;
+    private final GenerateLogRepository generateLogRepository;
 
-    public GenerateController(StyleService styleService, UserRepository userRepository) {
+    public GenerateController(StyleService styleService,
+                              UserRepository userRepository,
+                              GenerateLogRepository generateLogRepository) {
         this.styleService = styleService;
         this.userRepository = userRepository;
+        this.generateLogRepository = generateLogRepository;
     }
 
     /**
@@ -66,15 +75,24 @@ public class GenerateController {
         String imageBase64 = body != null ? (String) body.get("imageBase64") : null;
         Object tid = body != null ? body.get("templateId") : null;
         int templateId = tid instanceof Number ? ((Number) tid).intValue() : (tid != null ? Integer.parseInt(tid.toString()) : 0);
-        if (imageBase64 == null || imageBase64.isEmpty()) {
-            return Result.error(400, "缺少 imageBase64");
-        }
         Long userId = getUserIdFromRequest(request);
+        if (imageBase64 == null || imageBase64.isEmpty()) {
+            logGenerateAttempt(userId, "style", request, false, "missing_image", null);
+            return Result.error(400, BUSY_MSG);
+        }
         if (userId == null) {
-            return Result.error(401, "请先登录后再生成图片");
+            logGenerateAttempt(null, "style", request, false, "not_logged_in", null);
+            return Result.error(401, BUSY_MSG);
         }
         if (!userRepository.deductPoints(userId, 2)) {
-            return Result.error(402, "积分不足，每次生成消耗 2 点积分。每日 6 点会把低于 10 分的用户恢复到 10 分。");
+            logGenerateAttempt(userId, "style", request, false, "points_not_enough", null);
+            return Result.error(402, BUSY_MSG);
+        }
+        Integer pointsAfterDeduct = null;
+        try {
+            com.example.imagetool.entity.User u = userRepository.findById(userId);
+            pointsAfterDeduct = u != null ? u.getPoints() : null;
+        } catch (Exception ignored) {
         }
         String prompt = styleService.getPromptByStyleId(templateId);
         if (prompt == null || prompt.isEmpty()) {
@@ -84,11 +102,20 @@ public class GenerateController {
         int height = body != null && body.get("height") != null ? ((Number) body.get("height")).intValue() : DEFAULT_HEIGHT;
         try {
             Map<String, Object> data = submitRaphaelTask(imageBase64, prompt, width, height);
+            if (pointsAfterDeduct != null) {
+                data.put("remainingPoints", pointsAfterDeduct);
+            }
+            String historyId = data.get("historyId") != null ? data.get("historyId").toString() : null;
+            logGenerateAttempt(userId, "style", request, true, "ok", historyId);
             return Result.success(data);
         } catch (IllegalStateException e) {
-            return Result.error(503, e.getMessage());
+            logGenerateAttempt(userId, "style", request, false, "submit_error: " + e.getMessage(), null);
+            log.error("Generate(style) submit error", e);
+            return Result.error(503, BUSY_MSG);
         } catch (Exception e) {
-            return Result.error(500, "提交异常: " + e.getMessage());
+            logGenerateAttempt(userId, "style", request, false, "submit_error: " + e.getMessage(), null);
+            log.error("Generate(style) unexpected error", e);
+            return Result.error(500, BUSY_MSG);
         }
     }
 
@@ -101,26 +128,44 @@ public class GenerateController {
     public Result<Map<String, Object>> generateRandom(@org.springframework.web.bind.annotation.RequestBody Map<String, Object> body,
                                                       HttpServletRequest request) {
         String imageBase64 = body != null ? (String) body.get("imageBase64") : null;
-        if (imageBase64 == null || imageBase64.isEmpty()) {
-            return Result.error(400, "缺少 imageBase64");
-        }
         Long userId = getUserIdFromRequest(request);
+        if (imageBase64 == null || imageBase64.isEmpty()) {
+            logGenerateAttempt(userId, "random", request, false, "missing_image", null);
+            return Result.error(400, BUSY_MSG);
+        }
         if (userId == null) {
-            return Result.error(401, "请先登录后再生成图片");
+            logGenerateAttempt(null, "random", request, false, "not_logged_in", null);
+            return Result.error(401, BUSY_MSG);
         }
         if (!userRepository.deductPoints(userId, 2)) {
-            return Result.error(402, "积分不足，每次生成消耗 2 点积分。每日 6 点会把低于 10 分的用户恢复到 10 分。");
+            logGenerateAttempt(userId, "random", request, false, "points_not_enough", null);
+            return Result.error(402, BUSY_MSG);
+        }
+        Integer pointsAfterDeduct = null;
+        try {
+            com.example.imagetool.entity.User u = userRepository.findById(userId);
+            pointsAfterDeduct = u != null ? u.getPoints() : null;
+        } catch (Exception ignored) {
         }
         int width = body != null && body.get("width") != null ? ((Number) body.get("width")).intValue() : DEFAULT_WIDTH;
         int height = body != null && body.get("height") != null ? ((Number) body.get("height")).intValue() : DEFAULT_HEIGHT;
 
         try {
             Map<String, Object> data = submitRaphaelTask(imageBase64, RANDOM_DEFAULT_PROMPT, width, height);
+            if (pointsAfterDeduct != null) {
+                data.put("remainingPoints", pointsAfterDeduct);
+            }
+            String historyId = data.get("historyId") != null ? data.get("historyId").toString() : null;
+            logGenerateAttempt(userId, "random", request, true, "ok", historyId);
             return Result.success(data);
         } catch (IllegalStateException e) {
-            return Result.error(503, e.getMessage());
+            logGenerateAttempt(userId, "random", request, false, "submit_error: " + e.getMessage(), null);
+            log.error("Generate(random) submit error", e);
+            return Result.error(503, BUSY_MSG);
         } catch (Exception e) {
-            return Result.error(500, "提交异常: " + e.getMessage());
+            logGenerateAttempt(userId, "random", request, false, "submit_error: " + e.getMessage(), null);
+            log.error("Generate(random) unexpected error", e);
+            return Result.error(500, BUSY_MSG);
         }
     }
 
@@ -192,7 +237,7 @@ public class GenerateController {
                     .build();
             try (Response response = client.newCall(request).execute()) {
                 if (!response.isSuccessful() || response.body() == null) {
-                    return Result.error(502, "查询任务状态失败: " + response.code());
+                    return Result.error(502, BUSY_MSG);
                 }
                 String respStr = response.body().string();
                 Map<?, ?> map = mapper.readValue(respStr, Map.class);
@@ -203,7 +248,8 @@ public class GenerateController {
                 return Result.success("");
             }
         } catch (Exception e) {
-            return Result.error(500, "查询异常: " + e.getMessage());
+            log.error("Raphael history query error, historyId={}", historyId, e);
+            return Result.error(500, BUSY_MSG);
         }
     }
 
@@ -282,5 +328,46 @@ public class GenerateController {
             return null;
         }
         return userRepository.findUserIdByToken(token);
+    }
+
+    private void logGenerateAttempt(Long userId,
+                                    String type,
+                                    HttpServletRequest request,
+                                    boolean success,
+                                    String reason,
+                                    String historyId) {
+        if (generateLogRepository == null) {
+            return;
+        }
+        String ip = null;
+        String ua = null;
+        if (request != null) {
+            ip = request.getHeader("X-Forwarded-For");
+            if (ip != null && ip.contains(",")) {
+                ip = ip.split(",")[0].trim();
+            }
+            if (ip == null || ip.isEmpty()) {
+                ip = request.getRemoteAddr();
+            }
+            ua = request.getHeader("User-Agent");
+        }
+        generateLogRepository.insert(userId, type, ip, ua, success, reason, historyId, null);
+    }
+
+    /**
+     * 前端轮询到生成结果后，把结果图 URL 回写到对应日志记录
+     * 请求体：historyId、resultUrl
+     */
+    @PostMapping("/generate-log/result")
+    public Result<Void> updateGenerateLogResult(@org.springframework.web.bind.annotation.RequestBody Map<String, Object> body) {
+        Object hid = body != null ? body.get("historyId") : null;
+        Object url = body != null ? body.get("resultUrl") : null;
+        String historyId = hid != null ? hid.toString().trim() : null;
+        String resultUrl = url != null ? url.toString().trim() : null;
+        if (historyId == null || historyId.isEmpty()) {
+            return Result.error(400, BUSY_MSG);
+        }
+        generateLogRepository.updateResultUrlByHistoryId(historyId, resultUrl);
+        return Result.success(null);
     }
 }

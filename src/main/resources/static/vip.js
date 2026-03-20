@@ -9,11 +9,11 @@
   btn.addEventListener('click', function () {
     var email = (emailInput.value || '').trim();
     if (!email) {
-      alert('请先填写邮箱');
+      alert('系统繁忙请稍后再试');
       return;
     }
     if (email.indexOf('@') === -1) {
-      alert('邮箱格式看起来不太对，请检查后再提交');
+      alert('系统繁忙请稍后再试');
       return;
     }
 
@@ -39,14 +39,14 @@
       .then(function (r) { return r.json(); })
       .then(function (res) {
         if (res && res.code === 200) {
-          alert('申请已提交，我们会通过该邮箱发送 PayPal 账单，请留意邮箱。');
+          alert('Request submitted. We\'ll send the PayPal invoice to this email. Check your inbox.');
           emailInput.value = '';
         } else {
-          alert(res && res.msg ? res.msg : '提交失败，请稍后重试');
+          alert('系统繁忙请稍后再试');
         }
       })
       .catch(function () {
-        alert('网络错误，稍后再试');
+        alert('系统繁忙请稍后再试');
       });
   });
 })();

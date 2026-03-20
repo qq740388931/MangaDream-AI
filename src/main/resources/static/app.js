@@ -23,6 +23,7 @@
   var loginCloseBtn = document.getElementById('loginCloseBtn');
   var googleLoginBtn = document.getElementById('googleLoginBtn');
   var userInfo = document.getElementById('userInfo');
+  var btnUseSample = document.getElementById('btnUseSample');
 
   var imagePreviewCloseBtn = imagePreviewModal && imagePreviewModal.querySelector('.image-preview-modal__close');
   var imagePreviewBackdrop = imagePreviewModal && imagePreviewModal.querySelector('.image-preview-modal__backdrop');
@@ -93,13 +94,13 @@
       }
       var nameSpan = document.createElement('span');
       nameSpan.className = 'header-user__name';
-      nameSpan.textContent = currentUser.profile.name || currentUser.profile.email || '已登录';
+      nameSpan.textContent = currentUser.profile.name || currentUser.profile.email || 'Signed in';
       userInfo.appendChild(nameSpan);
       userInfo.appendChild(avatar);
 
       var popover = document.createElement('div');
       popover.className = 'header-user__popover';
-      var displayName = currentUser.profile.name || currentUser.profile.email || '已登录';
+      var displayName = currentUser.profile.name || currentUser.profile.email || 'Signed in';
       var nameDiv = document.createElement('div');
       nameDiv.className = 'header-user__popover-item';
       nameDiv.textContent = displayName;
@@ -111,14 +112,14 @@
       }
       var ptsDiv = document.createElement('div');
       ptsDiv.className = 'header-user__popover-item header-user__popover-item--muted';
-      ptsDiv.textContent = '积分：' + pts;
+      ptsDiv.textContent = 'Points: ' + pts;
       popover.appendChild(ptsDiv);
 
       var vipDays = currentUser.profile.vipDaysLeft;
       if (typeof vipDays === 'number' && vipDays > 0) {
         var vipDiv = document.createElement('div');
         vipDiv.className = 'header-user__popover-item header-user__popover-item--muted';
-        vipDiv.textContent = '会员剩余：' + vipDays + ' 天';
+        vipDiv.textContent = 'VIP: ' + vipDays + ' days left';
         popover.appendChild(vipDiv);
       }
 
@@ -128,7 +129,7 @@
 
       var logoutBtn = document.createElement('button');
       logoutBtn.type = 'button';
-      logoutBtn.textContent = '退出登录';
+      logoutBtn.textContent = 'Sign out';
       logoutBtn.className = 'header-user__logout-btn';
       logoutBtn.addEventListener('click', function () {
         try {
@@ -150,7 +151,7 @@
       btn.type = 'button';
       btn.id = 'headerLoginBtn';
       btn.className = 'btn btn--outline header-user__login-btn';
-      btn.textContent = '登录';
+      btn.textContent = 'Sign in';
       btn.addEventListener('click', function () {
         openLoginModal();
       });
@@ -204,7 +205,7 @@
 
   function handleGoogleCredentialResponse(credential) {
     if (!credential) {
-      alert('Google 登录失败，请重试');
+      alert('系统繁忙请稍后再试');
       return;
     }
     fetch('/api/auth/google', {
@@ -218,14 +219,14 @@
           saveUserToStorage(res.data);
           closeLoginModal();
           renderUserInfo();
-          alert('登录成功，可以继续生成啦');
+          alert('Signed in! You can keep generating.');
         } else {
-          alert(res && res.msg ? res.msg : '登录失败，请稍后重试');
+          alert('系统繁忙请稍后再试');
         }
       })
       .catch(function (err) {
         console.error('google login error', err);
-        alert('登录失败，请检查网络后重试');
+        alert('系统繁忙请稍后再试');
       });
   }
 
@@ -233,7 +234,7 @@
     if (!googleLoginBtn) return;
     googleLoginBtn.addEventListener('click', function () {
       if (!window.google || !window.google.accounts || !window.google.accounts.id) {
-        alert('Google 登录脚本尚未加载，请检查网络后稍等几秒再试。');
+        alert('系统繁忙请稍后再试');
         return;
       }
       window.google.accounts.id.initialize({
@@ -242,7 +243,7 @@
           if (resp && resp.credential) {
             handleGoogleCredentialResponse(resp.credential);
           } else {
-            alert('未能获取 Google 登录凭据，请重试');
+            alert('系统繁忙请稍后再试');
           }
         }
       });
@@ -268,18 +269,26 @@
         if (res && res.code === 200 && res.data) {
           saveUserToStorage(res.data);
           renderUserInfo();
-          console.log('Dev 自动登录成功');
+          console.log('Dev auto-login success');
         } else {
-          console.warn('Dev 登录失败', res);
+          console.warn('Dev login failed', res);
         }
       })
       .catch(function (err) {
-        console.error('Dev 登录接口错误', err);
+        console.error('Dev login API error', err);
       });
   }
 
   // --- Loading state ---
   var isGenerating = false;
+
+  function updateUserPointsIfAvailable(remainingPoints) {
+    if (!currentUser || !currentUser.profile) return;
+    if (typeof remainingPoints !== 'number') return;
+    currentUser.profile.points = remainingPoints;
+    saveUserToStorage(currentUser);
+    renderUserInfo();
+  }
 
   function setGenerating(flag) {
     isGenerating = !!flag;
@@ -306,10 +315,10 @@
       } else {
         currentImageBase64 = null;
       }
-      if (uploadPreviewImg) uploadPreviewImg.src = dataUrl || placeholderUrl('预览');
+      if (uploadPreviewImg) uploadPreviewImg.src = dataUrl || placeholderUrl('Preview');
       if (uploadRow) uploadRow.style.display = 'none';
       if (uploadPreviewWrap) uploadPreviewWrap.style.display = 'flex';
-      if (fileHint) fileHint.textContent = file.name || '已选择';
+      if (fileHint) fileHint.textContent = file.name || 'Selected';
     };
     reader.readAsDataURL(file);
   }
@@ -322,13 +331,37 @@
     if (uploadPreviewImg) uploadPreviewImg.src = '';
     if (uploadPreviewWrap) uploadPreviewWrap.style.display = 'none';
     if (uploadRow) uploadRow.style.display = '';
-    if (fileHint) fileHint.textContent = '未选择照片';
+    if (fileHint) fileHint.textContent = 'No photo selected';
   }
 
-  // --- 随机生成：无模板 ---
+  function useSampleImage() {
+    fetch('/images/22222.png')
+      .then(function (r) { return r.blob(); })
+      .then(function (blob) {
+        var reader = new FileReader();
+        reader.onload = function () {
+          var dataUrl = reader.result;
+          if (typeof dataUrl === 'string' && dataUrl.indexOf('base64,') !== -1) {
+            currentImageBase64 = dataUrl;
+          } else {
+            currentImageBase64 = null;
+          }
+          if (uploadPreviewImg) uploadPreviewImg.src = dataUrl || placeholderUrl('Sample');
+          if (uploadRow) uploadRow.style.display = 'none';
+          if (uploadPreviewWrap) uploadPreviewWrap.style.display = 'flex';
+          if (fileHint) fileHint.textContent = 'Using sample image 22222.png';
+        };
+        reader.readAsDataURL(blob);
+      })
+      .catch(function (err) {
+        console.error('Failed to load sample image', err);
+        alert('系统繁忙请稍后再试');
+      });
+  }
+
   function submitRandomGenerate() {
     if (!currentImageBase64) {
-      alert('请先上传图片');
+      alert('系统繁忙请稍后再试');
       return;
     }
     if (!ensureCanGenerateOrAskLogin()) {
@@ -349,23 +382,26 @@
         if (res && res.code === 200 && res.data) {
           var historyId = res.data.historyId;
           var pollIntervalMs = res.data.pollIntervalMs || 1500;
-          pollHistoryThenShow(historyId, pollIntervalMs);
+          if (typeof res.data.remainingPoints === 'number') {
+            console.log('remainingPoints=', res.data.remainingPoints);
+            updateUserPointsIfAvailable(res.data.remainingPoints);
+          }
+          pollHistoryThenShow(historyId, pollIntervalMs, currentImageBase64);
         } else {
-          alert(res && res.msg ? res.msg : '随机生成请求失败');
+          alert('系统繁忙请稍后再试');
           setGenerating(false);
         }
       })
       .catch(function (err) {
         console.error('generate-random error', err);
-        alert('网络错误，请稍后重试');
+        alert('系统繁忙请稍后再试');
         setGenerating(false);
       });
   }
 
-  // --- 风格生成：传模板 id，走 /api/generate ---
   function submitGenerateWithTemplate(templateId) {
     if (!currentImageBase64) {
-      alert('请先上传图片');
+      alert('系统繁忙请稍后再试');
       return;
     }
     if (!ensureCanGenerateOrAskLogin()) {
@@ -386,22 +422,25 @@
         if (res && res.code === 200 && res.data) {
           var historyId = res.data.historyId;
           var pollIntervalMs = res.data.pollIntervalMs || 1500;
-          pollHistoryThenShow(historyId, pollIntervalMs);
+          if (typeof res.data.remainingPoints === 'number') {
+            updateUserPointsIfAvailable(res.data.remainingPoints);
+          }
+          pollHistoryThenShow(historyId, pollIntervalMs, currentImageBase64);
         } else {
-          alert(res && res.msg ? res.msg : '生成请求失败');
+          alert('系统繁忙请稍后再试');
           setGenerating(false);
         }
       })
       .catch(function (err) {
         console.error('generate error', err);
-        alert('网络错误，请稍后重试');
+        alert('系统繁忙请稍后再试');
         setGenerating(false);
       });
   }
 
   var MAX_POLL_COUNT = 20;
 
-  function pollHistoryThenShow(historyId, pollIntervalMs) {
+  function pollHistoryThenShow(historyId, pollIntervalMs, originalBase64) {
     if (!historyId) return;
     var count = 0;
     var interval = setInterval(function () {
@@ -418,8 +457,13 @@
             var data = res.data;
             if (typeof data === 'string' && data.length > 0) {
               clearInterval(interval);
-              appendResultImage(data);
+              appendResultRow(originalBase64, data);
               setGenerating(false);
+              fetch('/api/generate-log/result', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ historyId: historyId, resultUrl: data })
+              }).catch(function (err) { console.warn('generate-log/result', err); });
             }
           }
         })
@@ -429,24 +473,52 @@
     }, pollIntervalMs);
   }
 
-  // --- Result section ---
-  function appendResultImage(url) {
-    if (!url || !resultWrap) return;
-    var a = document.createElement('a');
-    a.className = 'result-section__link';
-    a.href = url;
-    a.download = 'mangadream-result-' + Date.now() + '.png';
-    var img = document.createElement('img');
-    img.className = 'result-section__img';
-    img.src = toAbsoluteImageUrl(url);
-    img.alt = '生成结果';
-    a.appendChild(img);
-    a.addEventListener('click', function (e) {
-      e.preventDefault();
-      openImagePreview(url);
+  function appendResultRow(originalBase64, resultUrl) {
+    if (!resultWrap || !resultUrl) return;
+
+    var row = document.createElement('div');
+    row.className = 'result-row';
+
+    var colLeft = document.createElement('div');
+    colLeft.className = 'result-row__col';
+    var leftLabel = document.createElement('div');
+    leftLabel.className = 'result-row__label';
+    leftLabel.textContent = 'Original';
+    var leftWrap = document.createElement('div');
+    leftWrap.className = 'result-row__img-wrap';
+    var leftImg = document.createElement('img');
+    leftImg.className = 'result-row__img result-section__img';
+    leftImg.src = originalBase64 || placeholderUrl('Original');
+    leftImg.alt = 'Original';
+    leftWrap.appendChild(leftImg);
+    colLeft.appendChild(leftLabel);
+    colLeft.appendChild(leftWrap);
+
+    var colRight = document.createElement('div');
+    colRight.className = 'result-row__col';
+    var rightLabel = document.createElement('div');
+    rightLabel.className = 'result-row__label';
+    rightLabel.textContent = 'Result';
+    var rightWrap = document.createElement('div');
+    rightWrap.className = 'result-row__img-wrap result-row__img-wrap--clickable';
+    var rightImg = document.createElement('img');
+    rightImg.className = 'result-row__img result-section__img';
+    rightImg.src = toAbsoluteImageUrl(resultUrl);
+    rightImg.alt = 'Result';
+    rightWrap.appendChild(rightImg);
+    rightWrap.addEventListener('click', function () {
+      openImagePreview(resultUrl);
     });
-    resultWrap.appendChild(a);
-    if (resultSection) resultSection.style.display = '';
+    colRight.appendChild(rightLabel);
+    colRight.appendChild(rightWrap);
+
+    row.appendChild(colLeft);
+    row.appendChild(colRight);
+
+    resultWrap.appendChild(row);
+    if (resultSection) {
+      resultSection.style.display = '';
+    }
   }
 
   // --- Image preview modal ---
@@ -524,6 +596,7 @@
   if (fileInput) fileInput.addEventListener('change', onFileChange);
   if (btnReselect) btnReselect.addEventListener('click', onReselect);
   if (btnRandom) btnRandom.addEventListener('click', submitRandomGenerate);
+  if (btnUseSample) btnUseSample.addEventListener('click', useSampleImage);
 
   if (imagePreviewCloseBtn) imagePreviewCloseBtn.addEventListener('click', closeImagePreview);
   if (imagePreviewBackdrop) imagePreviewBackdrop.addEventListener('click', closeImagePreview);

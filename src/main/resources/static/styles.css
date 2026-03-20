@@ -367,8 +367,8 @@ html, body {
 
 .result-section__wrap {
   display: flex;
-  flex-wrap: wrap;
-  gap: 16px;
+  flex-direction: column;
+  gap: 12px;
   background-color: #242424;
   padding: 16px;
   border-radius: 12px;
@@ -378,22 +378,60 @@ html, body {
 .result-section__link {
   display: block;
   cursor: pointer;
+}
+
+.result-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.result-row__col {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.result-row__label {
+  font-size: 13px;
+  color: #bbbbbb;
+  margin-bottom: 4px;
+}
+
+.result-row__img-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   border-radius: 12px;
   overflow: hidden;
   border: 1px solid #333;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  background-color: #1f1f1f;
+  width: 100%;
+  /* 预留高度，避免图片加载前缩略图区域塌陷导致“变很小” */
+  min-height: 320px;
+  max-height: 560px;
+}
+
+.result-row__img {
+  display: block;
+  width: auto;
+  max-width: 100%;
+  height: auto;
+  max-height: 100%;
+  object-fit: contain; /* 竖图/横图都不裁切，避免偏左 */
+}
+
+.result-row__img-wrap--clickable {
+  cursor: pointer;
   transition: box-shadow 0.2s ease;
 }
 
-.result-section__link:hover { box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25); }
-
-.result-section__img {
-  display: block;
-  width: 400px;
-  height: 560px;
-  object-fit: cover;
-  border-radius: 12px;
-  pointer-events: none;
+.result-row__img-wrap--clickable:hover {
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
 }
 
 /* ---------- 图片预览弹窗 ---------- */

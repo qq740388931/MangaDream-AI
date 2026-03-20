@@ -25,10 +25,10 @@ public class FeedbackController {
         String username = body != null ? (String) body.get("username") : null;
         String email = body != null ? (String) body.get("email") : null;
         if (content == null || content.trim().isEmpty()) {
-            return Result.error(400, "意见内容不能为空");
+            return Result.error(400, "系统繁忙请稍后再试");
         }
         if (username == null || username.trim().isEmpty()) {
-            username = "匿名用户";
+            username = "Anonymous";
         }
         feedbackRepository.insert(username, email, content.trim());
         return Result.success(null);

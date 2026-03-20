@@ -1,20 +1,19 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>MangaDream AI - AI 图像生成</title>
+  <title>MangaDream AI - AI Image Generator</title>
   <link rel="stylesheet" href="styles.css" />
-  <!-- Google Identity Services，用于获取 Google id_token -->
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
   <div id="page-wrap">
     <header class="header">
       <nav class="nav">
-        <a class="nav__link" href="/">首页</a>
-        <a class="nav__link" href="/feedback.html">意见</a>
-        <a class="nav__link" href="/vip.html">会员</a>
+        <a class="nav__link" href="/">Home</a>
+        <a class="nav__link" href="/feedback.html">Feedback</a>
+        <a class="nav__link" href="/vip.html">Membership</a>
       </nav>
       <div class="header__top">
         <div class="header__brand">
@@ -24,43 +23,44 @@
         <div id="userInfo" class="header-user"></div>
       </div>
       <div class="header__tags">
-        <span class="tag">无需登录</span>
-        <span class="tag">多风格支持</span>
-        <span class="tag">极速生成</span>
+        <span class="tag">No sign-up required</span>
+        <span class="tag">Multiple styles</span>
+        <span class="tag">Fast generation</span>
       </div>
     </header>
 
     <section class="generator">
-      <p class="generator__intro">照片给我，帮你穿越到你最爱的动漫世界里哟</p>
+      <p class="generator__intro">Give us your photo and we'll drop you into your favorite anime world.</p>
       <div id="uploadRow" class="generator__row generator__row--upload">
         <label class="upload-btn">
           <input type="file" id="fileInput" accept="image/jpeg,image/png,image/webp" class="upload-btn__input" />
           <span class="upload-btn__plus">+</span>
-          <span class="upload-btn__label">选择照片</span>
+          <span class="upload-btn__label">Choose photo</span>
         </label>
-        <span id="fileHint" class="file-hint">未选择照片</span>
+        <span id="fileHint" class="file-hint">No photo selected</span>
+        <button type="button" id="btnUseSample" class="btn btn--secondary">Use sample photo</button>
       </div>
       <div id="uploadPreviewWrap" class="upload-preview" style="display: none;">
-        <img id="uploadPreviewImg" class="upload-preview__img" src="" alt="上传预览" />
+        <img id="uploadPreviewImg" class="upload-preview__img" src="" alt="Upload preview" />
         <div class="upload-preview__actions">
-          <button type="button" id="btnReselect" class="btn btn--outline">重新选择</button>
-          <button type="button" id="btnRandom" class="btn btn--primary" title="随机生成一个符合角色的照片">随机生成</button>
+          <button type="button" id="btnReselect" class="btn btn--outline">Choose another</button>
+          <button type="button" id="btnRandom" class="btn btn--primary" title="Generate a random style for this photo">Random generate</button>
         </div>
         <div id="loadingIndicator" class="loading-indicator" style="display: none;">
           <span class="loading-indicator__spinner"></span>
-          <span class="loading-indicator__text">正在生成中，请稍等...</span>
+          <span class="loading-indicator__text">Generating... please wait.</span>
         </div>
       </div>
     </section>
 
     <section id="resultSection" class="result-section" style="display: none;">
-      <h2 class="result-section__title">生成结果</h2>
+      <h2 class="result-section__title">Results</h2>
       <div id="resultWrap" class="result-section__wrap"></div>
     </section>
 
     <section class="inspiration">
-      <h2 class="inspiration__title">选择你想要的风格</h2>
-      <p class="inspiration__desc">想给你变个魔法，你选个风格，我哔——的一下变出来！</p>
+      <h2 class="inspiration__title">Pick your style</h2>
+      <p class="inspiration__desc">Pick a style and we'll transform you—poof!</p>
       <div id="inspirationGrid" class="inspiration__grid"></div>
     </section>
   </div>
@@ -68,9 +68,9 @@
   <div id="imagePreviewModal" class="image-preview-modal" style="display: none;" aria-hidden="true">
     <div class="image-preview-modal__backdrop"></div>
     <div class="image-preview-modal__box">
-      <button type="button" class="image-preview-modal__close" aria-label="关闭">×</button>
+      <button type="button" class="image-preview-modal__close" aria-label="Close">×</button>
       <a id="imagePreviewLink" href="" target="_blank" rel="noopener" download="mangadream-result.png">
-        <img id="imagePreviewImg" src="" alt="预览大图" />
+        <img id="imagePreviewImg" src="" alt="Preview" />
       </a>
     </div>
   </div>
@@ -78,10 +78,10 @@
   <div id="confirmModal" class="modal" style="display: none;" aria-hidden="true">
     <div class="modal__backdrop"></div>
     <div class="modal__box">
-      <p class="modal__text">生成此风格图片？</p>
+      <p class="modal__text">Generate image in this style?</p>
       <div class="modal__actions">
-        <button type="button" id="modalCancel" class="btn btn--secondary">取消</button>
-        <button type="button" id="modalConfirm" class="btn btn--primary" onclick="typeof window.onConfirmGenerate=== 'function' && window.onConfirmGenerate()">确认</button>
+        <button type="button" id="modalCancel" class="btn btn--secondary">Cancel</button>
+        <button type="button" id="modalConfirm" class="btn btn--primary" onclick="typeof window.onConfirmGenerate=== 'function' && window.onConfirmGenerate()">Confirm</button>
       </div>
     </div>
   </div>
@@ -89,15 +89,15 @@
   <div id="loginModal" class="modal" style="display: none;" aria-hidden="true">
     <div class="modal__backdrop"></div>
     <div class="modal__box">
-      <h3 class="login-modal__title">登录后继续使用</h3>
-      <p class="login-modal__desc">你已经体验了 2 次免费生成，登录后可继续使用全部功能。</p>
+      <h3 class="login-modal__title">Sign in to continue</h3>
+      <p class="login-modal__desc">Sign in to sync points and membership, and unlock more generations.</p>
       <div style="margin-bottom: 16px;">
         <button type="button" id="googleLoginBtn" class="login-modal__google-btn">
-          <span>使用 Google 登录</span>
+          <span>Sign in with Google</span>
         </button>
       </div>
       <div class="modal__actions">
-        <button type="button" id="loginCloseBtn" class="btn btn--secondary">关闭</button>
+        <button type="button" id="loginCloseBtn" class="btn btn--secondary">Close</button>
       </div>
     </div>
   </div>
