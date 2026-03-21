@@ -20,7 +20,11 @@ spring:
     url: jdbc:sqlite:./data/mangadream.db
     driver-class-name: org.sqlite.JDBC
 
+# 跨域：留空则允许任意来源（适合前后端分离或 CDN）。生产可改为仅你的站点，例如：
+# app.cors.allowed-origin-patterns: https://你的域名,https://www.你的域名
 app:
+  cors:
+    allowed-origin-patterns: ""
   raphael:
     # Raphael 浏览器 Cookie 整串；不配则生成类接口返回 503
     bearer-token: g_state={"i_l":0,"i_ll":1773842780593,"i_e":{"enable_itp_optimization":0},"i_b":"B8IGspeviOggmeu+KsD6JIi1ZZyy7fuChgnGwwOnqLg"}; __Secure-better-auth.session_token=k9WxWKVS5AGCyRl2Oxejqi9a581jEpUb.MKhsWO3HDOs8ePbttgB90xfhRcccXKx9%2B8O8YSPL7Fs%3D; cf_clearance=fWhbxM2Wtv9iE_Rlb.4555R8fFKZtrZNNY2ixpY6kSI-1773859455-1.2.1.1-TlGYXB6gubGk7aC2BNzDFJAK2yX8K5zC.zDfuZ9.2cLrzI0JfWwK6F9ssMUkr7Iq_mX_mGzeVgjH52rUKsujRc_5Pk5_6zGjaWEQ.73UBFYfcYBDProKwR8q1brhCXKvJD4DLr32h7p4YfmhoYCafD8Rwwx55XzTihUX.Z3pIgSWKstPjlJFWFj1DAZ0MxzxxEFp92QCNth4Tq9H.qWcS9_yngaTJGEZw8f0iYFAVcFBg80OWxbwuv7zjhMxZvAJoz9qh.24B9KsjQw6UrtFM9WbsFV3VzRwyKwPEcER7XbbGnc997rN9b0J7ZRhN4fuQjMzXAurCATVJ_rx.TmQQA

@@ -81,7 +81,7 @@ public class AuthController {
 
     @PostMapping("/google")
     public Result<Map<String, Object>> googleLogin(@RequestBody Map<String, Object> body) {
-        log.info("[GOOGLE_AUTH] Controller 收到 /api/auth/google");
+        log.warn("[GOOGLE_AUTH] Controller 收到 /api/auth/google（已进入业务方法）");
         if (googleClientId == null || googleClientId.isEmpty()) {
             log.error("Google 登录失败: 未配置 app.google.client-id");
             return Result.error(500, "未配置 app.google.client-id");

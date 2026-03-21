@@ -222,16 +222,28 @@
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ idToken: credential })
     })
-      .then(function (r) { return r.json(); })
-      .then(function (res) {
-        if (res && res.code === 200 && res.data) {
-          saveUserToStorage(res.data);
-          closeLoginModal();
-          renderUserInfo();
-          alert('Signed in! You can keep generating.');
-        } else {
-          alertApiMsg(res, '登录失败');
-        }
+      .then(function (r) {
+        return r.text().then(function (text) {
+          var res;
+          try {
+            res = JSON.parse(text);
+          } catch (e) {
+            alert('登录失败 HTTP ' + r.status + '（返回非 JSON，多为 Nginx/CORS/网关拦截）：\n' + (text ? text.substring(0, 400) : ''));
+            return;
+          }
+          if (!r.ok) {
+            alertApiMsg(res, '登录失败 HTTP ' + r.status);
+            return;
+          }
+          if (res && res.code === 200 && res.data) {
+            saveUserToStorage(res.data);
+            closeLoginModal();
+            renderUserInfo();
+            alert('Signed in! You can keep generating.');
+          } else {
+            alertApiMsg(res, '登录失败');
+          }
+        });
       })
       .catch(function (err) {
         console.error('google login error', err);

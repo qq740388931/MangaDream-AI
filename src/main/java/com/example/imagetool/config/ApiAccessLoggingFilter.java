@@ -118,6 +118,10 @@ public class ApiAccessLoggingFilter extends OncePerRequestFilter {
         }
 
         String respBody = AuditLogBodySanitizer.maskLargeDataFields(AuditLogBodySanitizer.bytesToUtf8(respBytes));
+        if ("/api/auth/google".equals(request.getRequestURI()) && "POST".equalsIgnoreCase(request.getMethod())) {
+            String snippet = respBody.length() > 800 ? respBody.substring(0, 800) + "…" : respBody;
+            log.warn("[AUTH] /api/auth/google 响应摘要 HTTP状态码={}, body={}", status, snippet);
+        }
         persist(request, reqBody, respBody, status, duration);
     }
 
