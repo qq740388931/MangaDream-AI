@@ -1,0 +1,11 @@
+# 可选：仅本地开发时启用，启动加 --spring.profiles.active=dev
+#
+# 下面 raphael.bearer-token 可覆盖主配置里的 Raphael Cookie
+
+app:
+  raphael:
+    bearer-token: ""
+  auth:
+    dev-enabled: true
+    dev-email: 740388931@qq.com
+    dev-name: "Local Dev User"

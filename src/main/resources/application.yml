@@ -1,4 +1,6 @@
-# MangaDream-AI 后端配置（端口 8080）
+# MangaDream-AI：默认即按线上方式跑（假登录关闭）；直接 java -jar 即可，不必设 prod profile。
+# 本地需要 dev-login 等：加 --spring.profiles.active=dev（见 application-dev.yml）
+#
 logging:
   level:
     root: INFO
@@ -6,6 +8,7 @@ logging:
 
 server:
   port: 8080
+  forward-headers-strategy: framework
 
 spring:
   application:
@@ -14,19 +17,16 @@ spring:
     url: jdbc:sqlite:./data/mangadream.db
     driver-class-name: org.sqlite.JDBC
 
-# Raphael 轮询/提交用的 Cookie（可选，不配则随机生成接口返回 503）
 app:
   raphael:
+    # Raphael 浏览器 Cookie 整串；不配则生成类接口返回 503
     bearer-token: g_state={"i_l":0,"i_ll":1773842780593,"i_e":{"enable_itp_optimization":0},"i_b":"B8IGspeviOggmeu+KsD6JIi1ZZyy7fuChgnGwwOnqLg"}; __Secure-better-auth.session_token=k9WxWKVS5AGCyRl2Oxejqi9a581jEpUb.MKhsWO3HDOs8ePbttgB90xfhRcccXKx9%2B8O8YSPL7Fs%3D; cf_clearance=fWhbxM2Wtv9iE_Rlb.4555R8fFKZtrZNNY2ixpY6kSI-1773859455-1.2.1.1-TlGYXB6gubGk7aC2BNzDFJAK2yX8K5zC.zDfuZ9.2cLrzI0JfWwK6F9ssMUkr7Iq_mX_mGzeVgjH52rUKsujRc_5Pk5_6zGjaWEQ.73UBFYfcYBDProKwR8q1brhCXKvJD4DLr32h7p4YfmhoYCafD8Rwwx55XzTihUX.Z3pIgSWKstPjlJFWFj1DAZ0MxzxxEFp92QCNth4Tq9H.qWcS9_yngaTJGEZw8f0iYFAVcFBg80OWxbwuv7zjhMxZvAJoz9qh.24B9KsjQw6UrtFM9WbsFV3VzRwyKwPEcER7XbbGnc997rN9b0J7ZRhN4fuQjMzXAurCATVJ_rx.TmQQA
   google:
     client-id: 1047046505874-3qj543ddivppa34lag0a6k0u9od7stnk.apps.googleusercontent.com
-  # 如果运行环境在国内，需要通过 HTTP 代理访问 Google，
-  # 可在这里配置代理地址（例如 Clash/Clash Verge 的本地 HTTP 端口）；
-  # 部署到能直连 Google 的海外服务器时，可以留空。
   proxy:
     host: ""
     port: 0
   auth:
-    dev-enabled: true
-    dev-email: 740388931@qq.com
-    dev-name: "Local Dev User"
+    dev-enabled: false
+    dev-email: ""
+    dev-name: ""

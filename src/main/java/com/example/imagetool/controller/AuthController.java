@@ -10,6 +10,7 @@ import okhttp3.Response;
 import org.springframework.beans.factory.annotation.Value;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -45,12 +46,6 @@ public class AuthController {
     @Value("${app.google.client-id:}")
     private String googleClientId;
 
-    @Value("${app.proxy.host:}")
-    private String proxyHost;
-
-    @Value("${app.proxy.port:0}")
-    private int proxyPort;
-
     @Value("${app.auth.dev-enabled:false}")
     private boolean devEnabled;
 
@@ -60,7 +55,9 @@ public class AuthController {
     @Value("${app.auth.dev-name:}")
     private String devName;
 
-    public AuthController(UserRepository userRepository) {
+    public AuthController(UserRepository userRepository,
+                          @Value("${app.proxy.host:}") String proxyHost,
+                          @Value("${app.proxy.port:0}") int proxyPort) {
         this.userRepository = userRepository;
         OkHttpClient.Builder builder = new OkHttpClient.Builder()
                 .connectTimeout(5, TimeUnit.SECONDS)
@@ -70,6 +67,16 @@ public class AuthController {
             builder.proxy(proxy);
         }
         this.client = builder.build();
+    }
+
+    /**
+     * 前端读取 Google 客户端 ID，与后端 app.google.client-id 保持一致（避免两处手写不一致）。
+     */
+    @GetMapping("/config")
+    public Result<Map<String, String>> publicAuthConfig() {
+        Map<String, String> data = new HashMap<>();
+        data.put("googleClientId", googleClientId != null ? googleClientId : "");
+        return Result.success(data);
     }
 
     @PostMapping("/google")

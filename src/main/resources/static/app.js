@@ -29,6 +29,9 @@
   var imagePreviewBackdrop = imagePreviewModal && imagePreviewModal.querySelector('.image-preview-modal__backdrop');
   var confirmModalBackdrop = confirmModal && confirmModal.querySelector('.modal__backdrop');
 
+  /** 与后端 app.google.client-id 一致；优先使用 GET /api/auth/config 返回值 */
+  var DEFAULT_GOOGLE_CLIENT_ID = '1047046505874-3qj543ddivppa34lag0a6k0u9od7stnk.apps.googleusercontent.com';
+
   // --- State ---
   var currentImageBase64 = null;
   var selectedTemplateId = null;
@@ -230,6 +233,23 @@
       });
   }
 
+  function getGoogleClientId() {
+    return window.__MANGADREAM_GOOGLE_CLIENT_ID__ || DEFAULT_GOOGLE_CLIENT_ID;
+  }
+
+  function loadAuthConfig() {
+    return fetch('/api/auth/config')
+      .then(function (r) { return r.json(); })
+      .then(function (res) {
+        if (res && res.code === 200 && res.data && res.data.googleClientId) {
+          window.__MANGADREAM_GOOGLE_CLIENT_ID__ = res.data.googleClientId;
+        }
+      })
+      .catch(function (err) {
+        console.warn('auth config load failed', err);
+      });
+  }
+
   function initGoogleButton() {
     if (!googleLoginBtn) return;
     googleLoginBtn.addEventListener('click', function () {
@@ -238,7 +258,7 @@
         return;
       }
       window.google.accounts.id.initialize({
-        client_id: '1047046505874-3qj543ddivppa34lag0a6k0u9od7stnk.apps.googleusercontent.com',
+        client_id: getGoogleClientId(),
         callback: function (resp) {
           if (resp && resp.credential) {
             handleGoogleCredentialResponse(resp.credential);
@@ -610,10 +630,12 @@
   if (confirmModalBackdrop) confirmModalBackdrop.addEventListener('click', closeConfirmModal);
   if (loginCloseBtn) loginCloseBtn.addEventListener('click', closeLoginModal);
 
-  // --- Init ---
-  loadUserFromStorage();
-  renderUserInfo();
-  initGoogleButton();
-  autoDevLoginIfNeeded();
-  loadInspiration();
+  // --- Init（先拉取 /api/auth/config，保证 Google client_id 与后端一致）---
+  loadAuthConfig().then(function () {
+    loadUserFromStorage();
+    renderUserInfo();
+    initGoogleButton();
+    autoDevLoginIfNeeded();
+    loadInspiration();
+  });
 })();
