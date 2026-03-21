@@ -2,6 +2,9 @@
 # 本地需要 dev-login 等：加 --spring.profiles.active=dev（见 application-dev.yml）
 #
 logging:
+  # 默认只打控制台；同时写入文件，方便线上查错（与 SQLite 里的 api_access_log 等业务表无关）
+  file:
+    name: logs/mangadream.log
   level:
     root: INFO
     com.example.imagetool: INFO
