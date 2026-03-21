@@ -239,7 +239,6 @@
             saveUserToStorage(res.data);
             closeLoginModal();
             renderUserInfo();
-            alert('Signed in! You can keep generating.');
           } else {
             alertApiMsg(res, '登录失败');
           }
