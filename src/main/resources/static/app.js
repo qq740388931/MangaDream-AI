@@ -40,7 +40,7 @@
   // --- Helpers ---
   /** 展示接口返回的 msg（后端已返回具体错误信息） */
   function alertApiMsg(res, fallback) {
-    var m = (res && res.msg) ? String(res.msg) : (fallback || '请求失败');
+    var m = (res && res.msg) ? String(res.msg) : (fallback || 'Request failed');
     alert(m);
   }
 
@@ -214,7 +214,7 @@
 
   function handleGoogleCredentialResponse(credential) {
     if (!credential) {
-      alert('未获取到 Google 登录凭据');
+      alert('No Google credential received');
       return;
     }
     fetch('/api/auth/google', {
@@ -228,11 +228,11 @@
           try {
             res = JSON.parse(text);
           } catch (e) {
-            alert('登录失败 HTTP ' + r.status + '（返回非 JSON，多为 Nginx/CORS/网关拦截）：\n' + (text ? text.substring(0, 400) : ''));
+            alert('Sign-in failed HTTP ' + r.status + ' (non-JSON response; often Nginx/CORS/gateway):\n' + (text ? text.substring(0, 400) : ''));
             return;
           }
           if (!r.ok) {
-            alertApiMsg(res, '登录失败 HTTP ' + r.status);
+            alertApiMsg(res, 'Sign-in failed HTTP ' + r.status);
             return;
           }
           if (res && res.code === 200 && res.data) {
@@ -240,13 +240,13 @@
             closeLoginModal();
             renderUserInfo();
           } else {
-            alertApiMsg(res, '登录失败');
+            alertApiMsg(res, 'Sign-in failed');
           }
         });
       })
       .catch(function (err) {
         console.error('google login error', err);
-        alert('网络错误，无法连接服务器');
+        alert('Network error: could not reach the server');
       });
   }
 
@@ -271,7 +271,7 @@
     if (!googleLoginBtn) return;
     googleLoginBtn.addEventListener('click', function () {
       if (!window.google || !window.google.accounts || !window.google.accounts.id) {
-        alert('Google 登录脚本未加载，请刷新页面重试');
+        alert('Google sign-in script failed to load. Refresh the page and try again.');
         return;
       }
       window.google.accounts.id.initialize({
@@ -280,7 +280,7 @@
           if (resp && resp.credential) {
             handleGoogleCredentialResponse(resp.credential);
           } else {
-            alert('未获取到 Google 凭据');
+            alert('No Google credential received');
           }
         }
       });
@@ -392,13 +392,13 @@
       })
       .catch(function (err) {
         console.error('Failed to load sample image', err);
-        alert('加载示例图失败');
+        alert('Failed to load sample image');
       });
   }
 
   function submitRandomGenerate() {
     if (!currentImageBase64) {
-      alert('请先选择或上传图片');
+      alert('Please select or upload an image first');
       return;
     }
     if (!ensureCanGenerateOrAskLogin()) {
@@ -431,14 +431,14 @@
       })
       .catch(function (err) {
         console.error('generate-random error', err);
-        alert('网络错误，无法连接服务器');
+        alert('Network error: could not reach the server');
         setGenerating(false);
       });
   }
 
   function submitGenerateWithTemplate(templateId) {
     if (!currentImageBase64) {
-      alert('请先选择或上传图片');
+      alert('Please select or upload an image first');
       return;
     }
     if (!ensureCanGenerateOrAskLogin()) {
@@ -470,7 +470,7 @@
       })
       .catch(function (err) {
         console.error('generate error', err);
-        alert('网络错误，无法连接服务器');
+        alert('Network error: could not reach the server');
         setGenerating(false);
       });
   }

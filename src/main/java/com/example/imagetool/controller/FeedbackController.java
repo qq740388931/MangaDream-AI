@@ -30,7 +30,7 @@ public class FeedbackController {
         String email = body != null ? (String) body.get("email") : null;
         if (content == null || content.trim().isEmpty()) {
             log.warn("feedback: 内容为空");
-            return Result.error(400, "反馈内容不能为空");
+            return Result.error(400, "Feedback content cannot be empty");
         }
         if (username == null || username.trim().isEmpty()) {
             username = "Anonymous";

@@ -84,24 +84,24 @@ public class AuthController {
         log.warn("[GOOGLE_AUTH] Controller 收到 /api/auth/google（已进入业务方法）");
         if (googleClientId == null || googleClientId.isEmpty()) {
             log.error("Google 登录失败: 未配置 app.google.client-id");
-            return Result.error(500, "未配置 app.google.client-id");
+            return Result.error(500, "app.google.client-id is not configured");
         }
         String idToken = body != null ? (String) body.get("idToken") : null;
         if (idToken == null || idToken.isEmpty()) {
             log.warn("Google 登录失败: 请求体缺少 idToken");
-            return Result.error(400, "缺少 idToken");
+            return Result.error(400, "Missing idToken");
         }
         try {
             log.info("开始校验 Google id_token，前 20 字符：{}", idToken.substring(0, Math.min(idToken.length(), 20)));
             Map<String, Object> tokenInfo = verifyIdToken(idToken);
             if (tokenInfo == null) {
                 log.warn("Google token 校验返回 null，可能是请求失败或响应体为空");
-                return Result.error(401, "Google token 校验失败（tokeninfo 无有效响应）");
+                return Result.error(401, "Google token verification failed (no valid tokeninfo response)");
             }
             String aud = stringValue(tokenInfo.get("aud"));
             if (!googleClientId.equals(aud)) {
                 log.warn("Google token aud 不匹配，期望={}, 实际={}", googleClientId, aud);
-                return Result.error(401, "Google token 与 app.google.client-id 不一致（aud 不匹配），请检查控制台 OAuth 客户端 ID");
+                return Result.error(401, "Google token aud does not match app.google.client-id; check OAuth client ID in Google Cloud Console");
             }
             String sub = stringValue(tokenInfo.get("sub"));
             String email = stringValue(tokenInfo.get("email"));
@@ -109,7 +109,7 @@ public class AuthController {
             String picture = stringValue(tokenInfo.get("picture"));
             if (sub == null || sub.isEmpty()) {
                 log.warn("Google token 中缺少 sub 字段，tokenInfo={}", tokenInfo);
-                return Result.error(401, "Google token 缺少用户标识 sub");
+                return Result.error(401, "Google token is missing user id (sub)");
             }
 
             User user = userRepository.findByGoogleSub(sub);
@@ -147,11 +147,11 @@ public class AuthController {
     public Result<Map<String, Object>> devLogin() {
         if (!devEnabled) {
             log.warn("dev-login 被拒绝: app.auth.dev-enabled=false");
-            return Result.error(403, "dev-login 未启用（app.auth.dev-enabled=false）");
+            return Result.error(403, "dev-login is disabled (app.auth.dev-enabled=false)");
         }
         if (devEmail == null || devEmail.isEmpty()) {
             log.error("dev-login 失败: 未配置 app.auth.dev-email");
-            return Result.error(500, "未配置 app.auth.dev-email");
+            return Result.error(500, "app.auth.dev-email is not configured");
         }
         try {
             String sub = "dev-" + devEmail;

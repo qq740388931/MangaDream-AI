@@ -12,7 +12,7 @@ public final class ErrorMessageUtil {
 
     public static String fromThrowable(Throwable e) {
         if (e == null) {
-            return "未知错误";
+            return "Unknown error";
         }
         String m = e.getMessage();
         if (m == null || m.trim().isEmpty()) {

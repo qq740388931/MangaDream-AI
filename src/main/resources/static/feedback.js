@@ -9,7 +9,7 @@
   btn.addEventListener('click', function () {
     var content = textarea.value || '';
     if (!content.trim()) {
-      alert('请输入反馈内容');
+      alert('Please enter your feedback');
       return;
     }
 
@@ -37,11 +37,11 @@
           alert('Thanks for your feedback!');
           textarea.value = '';
         } else {
-          alert((res && res.msg) ? res.msg : '提交失败');
+          alert((res && res.msg) ? res.msg : 'Submit failed');
         }
       })
       .catch(function () {
-        alert('网络错误，无法连接服务器');
+        alert('Network error: could not reach the server');
       });
   });
 })();

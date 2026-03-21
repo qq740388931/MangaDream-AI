@@ -79,17 +79,17 @@ public class GenerateController {
         if (imageBase64 == null || imageBase64.isEmpty()) {
             log.warn("generate(style): 缺少图片, userId={}", userId);
             logGenerateAttempt(userId, "style", request, false, "missing_image", null);
-            return Result.error(400, "缺少图片 imageBase64");
+            return Result.error(400, "Missing image (imageBase64)");
         }
         if (userId == null) {
             log.warn("generate(style): 未登录");
             logGenerateAttempt(null, "style", request, false, "not_logged_in", null);
-            return Result.error(401, "请先登录（请求头携带 X-Session-Token）");
+            return Result.error(401, "Please sign in (send X-Session-Token header)");
         }
         if (!userRepository.deductPoints(userId, 2)) {
             log.warn("generate(style): 积分不足, userId={}", userId);
             logGenerateAttempt(userId, "style", request, false, "points_not_enough", null);
-            return Result.error(402, "积分不足（每次生成消耗 2 分）");
+            return Result.error(402, "Insufficient points. Please upgrade to membership or try again after tomorrow's free points are granted.");
         }
         Integer pointsAfterDeduct = null;
         try {
@@ -135,17 +135,17 @@ public class GenerateController {
         if (imageBase64 == null || imageBase64.isEmpty()) {
             log.warn("generate(random): 缺少图片, userId={}", userId);
             logGenerateAttempt(userId, "random", request, false, "missing_image", null);
-            return Result.error(400, "缺少图片 imageBase64");
+            return Result.error(400, "Missing image (imageBase64)");
         }
         if (userId == null) {
             log.warn("generate(random): 未登录");
             logGenerateAttempt(null, "random", request, false, "not_logged_in", null);
-            return Result.error(401, "请先登录（请求头携带 X-Session-Token）");
+            return Result.error(401, "Please sign in (send X-Session-Token header)");
         }
         if (!userRepository.deductPoints(userId, 2)) {
             log.warn("generate(random): 积分不足, userId={}", userId);
             logGenerateAttempt(userId, "random", request, false, "points_not_enough", null);
-            return Result.error(402, "积分不足（每次生成消耗 2 分）");
+            return Result.error(402, "Insufficient points. Please upgrade to membership or try again after tomorrow's free points are granted.");
         }
         Integer pointsAfterDeduct = null;
         try {
@@ -177,7 +177,7 @@ public class GenerateController {
 
     private Map<String, Object> submitRaphaelTask(String imageBase64, String prompt, int width, int height) throws Exception {
         if (bearerToken == null || bearerToken.isEmpty()) {
-            throw new IllegalStateException("未配置 app.raphael.bearer-token，请在 application.yml 中配置");
+            throw new IllegalStateException("app.raphael.bearer-token is not configured (see application.yml)");
         }
 
         String jsonBody = buildSubmitBody(imageBase64, prompt, width, height);
@@ -210,12 +210,12 @@ public class GenerateController {
 
         try (Response response = client.newCall(raphaelRequest).execute()) {
             if (!response.isSuccessful() || response.body() == null) {
-                throw new RuntimeException("Raphael 提交失败: " + response.code());
+                throw new RuntimeException("Raphael submit failed: HTTP " + response.code());
             }
             String respStr = response.body().string();
             TaskSubmitResponse parsed = mapper.readValue(respStr, TaskSubmitResponse.class);
             if (!parsed.isSuccess() || parsed.getData() == null) {
-                throw new RuntimeException(parsed.getMessage() != null ? parsed.getMessage() : "提交失败");
+                throw new RuntimeException(parsed.getMessage() != null ? parsed.getMessage() : "Submit failed");
             }
             Map<String, Object> data = new HashMap<>();
             data.put("historyId", parsed.getData().getHistoryId());
@@ -244,7 +244,7 @@ public class GenerateController {
             try (Response response = client.newCall(request).execute()) {
                 if (!response.isSuccessful() || response.body() == null) {
                     log.error("Raphael history HTTP 失败: status={}, historyId={}", response.code(), historyId);
-                    return Result.error(502, "Raphael 历史接口 HTTP " + response.code());
+                    return Result.error(502, "Raphael history API HTTP " + response.code());
                 }
                 String respStr = response.body().string();
                 Map<?, ?> map = mapper.readValue(respStr, Map.class);
@@ -378,7 +378,7 @@ public class GenerateController {
         String resultUrl = url != null ? url.toString().trim() : null;
         if (historyId == null || historyId.isEmpty()) {
             log.warn("generate-log/result: 缺少 historyId");
-            return Result.error(400, "缺少 historyId");
+            return Result.error(400, "Missing historyId");
         }
         generateLogRepository.updateResultUrlByHistoryId(historyId, resultUrl);
         return Result.success(null);

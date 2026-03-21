@@ -33,7 +33,7 @@ public class MembershipController {
         String email = body != null ? (String) body.get("email") : null;
         if (email == null || email.trim().isEmpty()) {
             log.warn("membership-request: 缺少 email");
-            return Result.error(400, "邮箱不能为空");
+            return Result.error(400, "Email is required");
         }
         String planCode = body != null ? (String) body.get("planCode") : null;
         if (planCode == null || planCode.trim().isEmpty()) {
@@ -56,7 +56,7 @@ public class MembershipController {
         }
 
         if (username == null || username.trim().isEmpty()) {
-            username = "匿名用户";
+            username = "Anonymous";
         }
 
         try {

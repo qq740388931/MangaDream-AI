@@ -45,7 +45,7 @@ public class StyleController {
         String prompt = styleService.getPromptByStyleId(styleId);
         if (prompt == null) {
             log.warn("风格不存在或无提示词: styleId={}", styleId);
-            return Result.error(404, "该风格不存在或暂无提示词（styleId=" + styleId + "）");
+            return Result.error(404, "Style not found or has no prompt (styleId=" + styleId + ")");
         }
         return Result.success(new StylePrompt(prompt));
     }
