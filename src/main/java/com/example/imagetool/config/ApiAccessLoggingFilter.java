@@ -46,6 +46,10 @@ public class ApiAccessLoggingFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
+        String uri = request.getRequestURI();
+        if (uri != null && uri.startsWith("/api/auth")) {
+            log.info("[AUTH] 请求已进入服务端 {} {}", request.getMethod(), uri);
+        }
         long start = System.currentTimeMillis();
         boolean largeImagePost = isLargeImagePost(request);
 

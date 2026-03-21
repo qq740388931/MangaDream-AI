@@ -81,6 +81,7 @@ public class AuthController {
 
     @PostMapping("/google")
     public Result<Map<String, Object>> googleLogin(@RequestBody Map<String, Object> body) {
+        log.info("[GOOGLE_AUTH] Controller 收到 /api/auth/google");
         if (googleClientId == null || googleClientId.isEmpty()) {
             log.error("Google 登录失败: 未配置 app.google.client-id");
             return Result.error(500, BUSY_MSG);
@@ -130,9 +131,10 @@ public class AuthController {
             profile.put("vipDaysLeft", calcVipDaysLeft(user.getVipExpireAt()));
             data.put("token", sessionToken);
             data.put("profile", profile);
+            log.info("[GOOGLE_AUTH] 登录成功 userId={}, email={}", user.getId(), user.getEmail());
             return Result.success(data);
         } catch (Exception e) {
-            log.error("Google 登录异常", e);
+            log.error("[GOOGLE_AUTH] 登录过程异常", e);
             return Result.error(500, BUSY_MSG);
         }
     }
@@ -188,13 +190,18 @@ public class AuthController {
                 .get()
                 .build();
         try (Response response = client.newCall(request).execute()) {
-            if (!response.isSuccessful() || response.body() == null) {
-                log.warn("调用 Google tokeninfo 失败，HTTP 状态码={}", response.code());
+            String raw = response.body() != null ? response.body().string() : "";
+            if (!response.isSuccessful()) {
+                String snippet = raw.length() > 800 ? raw.substring(0, 800) + "…" : raw;
+                log.warn("[GOOGLE_AUTH] tokeninfo HTTP 失败 code={}, 响应片段={}", response.code(), snippet);
                 return null;
             }
-            String resp = response.body().string();
-            log.debug("Google tokeninfo 响应: {}", resp);
-            return mapper.readValue(resp, Map.class);
+            if (raw.isEmpty()) {
+                log.warn("[GOOGLE_AUTH] tokeninfo 响应体为空");
+                return null;
+            }
+            log.info("[GOOGLE_AUTH] tokeninfo 校验成功，响应长度={}", raw.length());
+            return mapper.readValue(raw, Map.class);
         }
     }
 

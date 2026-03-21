@@ -39,6 +39,9 @@ public class ApiErrorLoggingAdvice implements ResponseBodyAdvice<Result<?>> {
                 path = ((ServletServerHttpRequest) request).getServletRequest().getRequestURI();
             }
             log.warn("接口业务错误: code={}, msg={}, path={}", body.getCode(), body.getMsg(), path);
+            if (path != null && path.contains("/api/auth")) {
+                log.warn("[GOOGLE_AUTH] 业务失败（见上一条 code/msg），path={}", path);
+            }
         }
         return body;
     }
