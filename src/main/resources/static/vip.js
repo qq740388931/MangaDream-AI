@@ -9,11 +9,11 @@
   btn.addEventListener('click', function () {
     var email = (emailInput.value || '').trim();
     if (!email) {
-      alert('系统繁忙请稍后再试');
+      alert('请输入邮箱');
       return;
     }
     if (email.indexOf('@') === -1) {
-      alert('系统繁忙请稍后再试');
+      alert('邮箱格式不正确');
       return;
     }
 
@@ -42,11 +42,11 @@
           alert('Request submitted. We\'ll send the PayPal invoice to this email. Check your inbox.');
           emailInput.value = '';
         } else {
-          alert('系统繁忙请稍后再试');
+          alert((res && res.msg) ? res.msg : '提交失败');
         }
       })
       .catch(function () {
-        alert('系统繁忙请稍后再试');
+        alert('网络错误，无法连接服务器');
       });
   });
 })();

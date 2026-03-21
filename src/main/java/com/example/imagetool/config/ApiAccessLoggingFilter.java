@@ -21,7 +21,9 @@ import java.io.IOException;
 
 /**
  * 记录所有 /api/** 请求的入参、出参（脱敏）、用户、耗时到表 api_access_log。
- * 含大图 base64 的 POST（/api/generate、/api/generate-random）不缓存请求体，只记 content-length，避免 OOM。
+ * 以下情况不对请求使用 ContentCachingRequestWrapper，避免与 Spring 解析 @RequestBody 冲突或阻塞：
+ * - POST /api/generate、/api/generate-random（大图）
+ * - 所有 POST /api/auth/**（含 Google 登录 JSON）
  */
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE + 50)
@@ -51,13 +53,16 @@ public class ApiAccessLoggingFilter extends OncePerRequestFilter {
             log.info("[AUTH] 请求已进入服务端 {} {}", request.getMethod(), uri);
         }
         long start = System.currentTimeMillis();
-        boolean largeImagePost = isLargeImagePost(request);
+        boolean useRawRequest = shouldNotWrapRequestBody(request);
 
-        if (largeImagePost) {
+        if (useRawRequest) {
             ContentCachingResponseWrapper respWrapper = new ContentCachingResponseWrapper(response);
             try {
                 filterChain.doFilter(request, respWrapper);
             } finally {
+                if (uri != null && uri.startsWith("/api/auth")) {
+                    log.info("[AUTH] 请求处理完成（Filter 链返回）{} {}", request.getMethod(), uri);
+                }
                 finishAndPersist(request, null, respWrapper, start, true);
             }
             return;
@@ -72,13 +77,17 @@ public class ApiAccessLoggingFilter extends OncePerRequestFilter {
         }
     }
 
-    private static boolean isLargeImagePost(HttpServletRequest request) {
+    /** 不使用 ContentCachingRequestWrapper，避免消费/缓存请求体与 Controller 读 body 冲突 */
+    private static boolean shouldNotWrapRequestBody(HttpServletRequest request) {
         if (!"POST".equalsIgnoreCase(request.getMethod())) {
             return false;
         }
         String uri = request.getRequestURI();
         if (uri == null) {
             return false;
+        }
+        if (uri.startsWith("/api/auth")) {
+            return true;
         }
         return "/api/generate".equals(uri) || "/api/generate-random".equals(uri);
     }

@@ -1,5 +1,6 @@
 package com.example.imagetool.controller;
 
+import com.example.imagetool.common.ErrorMessageUtil;
 import com.example.imagetool.common.Result;
 import com.example.imagetool.repository.UserRepository;
 import com.example.imagetool.repository.GenerateLogRepository;
@@ -34,7 +35,6 @@ public class GenerateController {
 
     private static final String RAPHAEL_SUBMIT_URL = "https://raphael.app/api/ai-image-editor/task";
     private static final String RAPHAEL_HISTORY_URL = "https://raphael.app/api/history";
-    private static final String BUSY_MSG = "系统繁忙请稍后再试";
     private static final Logger log = LoggerFactory.getLogger(GenerateController.class);
     private static final int DEFAULT_WIDTH = 683;
     private static final int DEFAULT_HEIGHT = 1024;
@@ -79,17 +79,17 @@ public class GenerateController {
         if (imageBase64 == null || imageBase64.isEmpty()) {
             log.warn("generate(style): 缺少图片, userId={}", userId);
             logGenerateAttempt(userId, "style", request, false, "missing_image", null);
-            return Result.error(400, BUSY_MSG);
+            return Result.error(400, "缺少图片 imageBase64");
         }
         if (userId == null) {
             log.warn("generate(style): 未登录");
             logGenerateAttempt(null, "style", request, false, "not_logged_in", null);
-            return Result.error(401, BUSY_MSG);
+            return Result.error(401, "请先登录（请求头携带 X-Session-Token）");
         }
         if (!userRepository.deductPoints(userId, 2)) {
             log.warn("generate(style): 积分不足, userId={}", userId);
             logGenerateAttempt(userId, "style", request, false, "points_not_enough", null);
-            return Result.error(402, BUSY_MSG);
+            return Result.error(402, "积分不足（每次生成消耗 2 分）");
         }
         Integer pointsAfterDeduct = null;
         try {
@@ -114,11 +114,11 @@ public class GenerateController {
         } catch (IllegalStateException e) {
             logGenerateAttempt(userId, "style", request, false, "submit_error: " + e.getMessage(), null);
             log.error("Generate(style) submit error", e);
-            return Result.error(503, BUSY_MSG);
+            return Result.error(503, ErrorMessageUtil.fromThrowable(e));
         } catch (Exception e) {
             logGenerateAttempt(userId, "style", request, false, "submit_error: " + e.getMessage(), null);
             log.error("Generate(style) unexpected error", e);
-            return Result.error(500, BUSY_MSG);
+            return Result.error(500, ErrorMessageUtil.fromThrowable(e));
         }
     }
 
@@ -135,17 +135,17 @@ public class GenerateController {
         if (imageBase64 == null || imageBase64.isEmpty()) {
             log.warn("generate(random): 缺少图片, userId={}", userId);
             logGenerateAttempt(userId, "random", request, false, "missing_image", null);
-            return Result.error(400, BUSY_MSG);
+            return Result.error(400, "缺少图片 imageBase64");
         }
         if (userId == null) {
             log.warn("generate(random): 未登录");
             logGenerateAttempt(null, "random", request, false, "not_logged_in", null);
-            return Result.error(401, BUSY_MSG);
+            return Result.error(401, "请先登录（请求头携带 X-Session-Token）");
         }
         if (!userRepository.deductPoints(userId, 2)) {
             log.warn("generate(random): 积分不足, userId={}", userId);
             logGenerateAttempt(userId, "random", request, false, "points_not_enough", null);
-            return Result.error(402, BUSY_MSG);
+            return Result.error(402, "积分不足（每次生成消耗 2 分）");
         }
         Integer pointsAfterDeduct = null;
         try {
@@ -167,11 +167,11 @@ public class GenerateController {
         } catch (IllegalStateException e) {
             logGenerateAttempt(userId, "random", request, false, "submit_error: " + e.getMessage(), null);
             log.error("Generate(random) submit error", e);
-            return Result.error(503, BUSY_MSG);
+            return Result.error(503, ErrorMessageUtil.fromThrowable(e));
         } catch (Exception e) {
             logGenerateAttempt(userId, "random", request, false, "submit_error: " + e.getMessage(), null);
             log.error("Generate(random) unexpected error", e);
-            return Result.error(500, BUSY_MSG);
+            return Result.error(500, ErrorMessageUtil.fromThrowable(e));
         }
     }
 
@@ -244,7 +244,7 @@ public class GenerateController {
             try (Response response = client.newCall(request).execute()) {
                 if (!response.isSuccessful() || response.body() == null) {
                     log.error("Raphael history HTTP 失败: status={}, historyId={}", response.code(), historyId);
-                    return Result.error(502, BUSY_MSG);
+                    return Result.error(502, "Raphael 历史接口 HTTP " + response.code());
                 }
                 String respStr = response.body().string();
                 Map<?, ?> map = mapper.readValue(respStr, Map.class);
@@ -256,7 +256,7 @@ public class GenerateController {
             }
         } catch (Exception e) {
             log.error("Raphael history query error, historyId={}", historyId, e);
-            return Result.error(500, BUSY_MSG);
+            return Result.error(500, ErrorMessageUtil.fromThrowable(e));
         }
     }
 
@@ -378,7 +378,7 @@ public class GenerateController {
         String resultUrl = url != null ? url.toString().trim() : null;
         if (historyId == null || historyId.isEmpty()) {
             log.warn("generate-log/result: 缺少 historyId");
-            return Result.error(400, BUSY_MSG);
+            return Result.error(400, "缺少 historyId");
         }
         generateLogRepository.updateResultUrlByHistoryId(historyId, resultUrl);
         return Result.success(null);

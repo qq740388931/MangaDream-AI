@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseBodyAdvice;
 
 /**
- * 任意接口返回 {@link Result} 且 code≠200 时打一条日志，避免只返回「系统繁忙」却无处查因。
+ * 任意接口返回 {@link Result} 且 code≠200 时打一条日志，便于与 msg 对照排查。
  */
 @ControllerAdvice
 public class ApiErrorLoggingAdvice implements ResponseBodyAdvice<Result<?>> {

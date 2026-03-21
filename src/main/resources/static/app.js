@@ -38,6 +38,12 @@
   var currentUser = null;
 
   // --- Helpers ---
+  /** 展示接口返回的 msg（后端已返回具体错误信息） */
+  function alertApiMsg(res, fallback) {
+    var m = (res && res.msg) ? String(res.msg) : (fallback || '请求失败');
+    alert(m);
+  }
+
   function toAbsoluteImageUrl(url) {
     if (!url || typeof url !== 'string') return url;
     if (url.startsWith('/images/')) {
@@ -208,7 +214,7 @@
 
   function handleGoogleCredentialResponse(credential) {
     if (!credential) {
-      alert('系统繁忙请稍后再试');
+      alert('未获取到 Google 登录凭据');
       return;
     }
     fetch('/api/auth/google', {
@@ -224,12 +230,12 @@
           renderUserInfo();
           alert('Signed in! You can keep generating.');
         } else {
-          alert('系统繁忙请稍后再试');
+          alertApiMsg(res, '登录失败');
         }
       })
       .catch(function (err) {
         console.error('google login error', err);
-        alert('系统繁忙请稍后再试');
+        alert('网络错误，无法连接服务器');
       });
   }
 
@@ -254,7 +260,7 @@
     if (!googleLoginBtn) return;
     googleLoginBtn.addEventListener('click', function () {
       if (!window.google || !window.google.accounts || !window.google.accounts.id) {
-        alert('系统繁忙请稍后再试');
+        alert('Google 登录脚本未加载，请刷新页面重试');
         return;
       }
       window.google.accounts.id.initialize({
@@ -263,7 +269,7 @@
           if (resp && resp.credential) {
             handleGoogleCredentialResponse(resp.credential);
           } else {
-            alert('系统繁忙请稍后再试');
+            alert('未获取到 Google 凭据');
           }
         }
       });
@@ -375,13 +381,13 @@
       })
       .catch(function (err) {
         console.error('Failed to load sample image', err);
-        alert('系统繁忙请稍后再试');
+        alert('加载示例图失败');
       });
   }
 
   function submitRandomGenerate() {
     if (!currentImageBase64) {
-      alert('系统繁忙请稍后再试');
+      alert('请先选择或上传图片');
       return;
     }
     if (!ensureCanGenerateOrAskLogin()) {
@@ -408,20 +414,20 @@
           }
           pollHistoryThenShow(historyId, pollIntervalMs, currentImageBase64);
         } else {
-          alert('系统繁忙请稍后再试');
+          alertApiMsg(res);
           setGenerating(false);
         }
       })
       .catch(function (err) {
         console.error('generate-random error', err);
-        alert('系统繁忙请稍后再试');
+        alert('网络错误，无法连接服务器');
         setGenerating(false);
       });
   }
 
   function submitGenerateWithTemplate(templateId) {
     if (!currentImageBase64) {
-      alert('系统繁忙请稍后再试');
+      alert('请先选择或上传图片');
       return;
     }
     if (!ensureCanGenerateOrAskLogin()) {
@@ -447,13 +453,13 @@
           }
           pollHistoryThenShow(historyId, pollIntervalMs, currentImageBase64);
         } else {
-          alert('系统繁忙请稍后再试');
+          alertApiMsg(res);
           setGenerating(false);
         }
       })
       .catch(function (err) {
         console.error('generate error', err);
-        alert('系统繁忙请稍后再试');
+        alert('网络错误，无法连接服务器');
         setGenerating(false);
       });
   }

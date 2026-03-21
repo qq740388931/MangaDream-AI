@@ -9,7 +9,7 @@
   btn.addEventListener('click', function () {
     var content = textarea.value || '';
     if (!content.trim()) {
-      alert('系统繁忙请稍后再试');
+      alert('请输入反馈内容');
       return;
     }
 
@@ -37,11 +37,11 @@
           alert('Thanks for your feedback!');
           textarea.value = '';
         } else {
-          alert('系统繁忙请稍后再试');
+          alert((res && res.msg) ? res.msg : '提交失败');
         }
       })
       .catch(function () {
-        alert('系统繁忙请稍后再试');
+        alert('网络错误，无法连接服务器');
       });
   });
 })();
