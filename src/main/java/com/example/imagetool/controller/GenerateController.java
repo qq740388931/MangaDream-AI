@@ -77,14 +77,17 @@ public class GenerateController {
         int templateId = tid instanceof Number ? ((Number) tid).intValue() : (tid != null ? Integer.parseInt(tid.toString()) : 0);
         Long userId = getUserIdFromRequest(request);
         if (imageBase64 == null || imageBase64.isEmpty()) {
+            log.warn("generate(style): 缺少图片, userId={}", userId);
             logGenerateAttempt(userId, "style", request, false, "missing_image", null);
             return Result.error(400, BUSY_MSG);
         }
         if (userId == null) {
+            log.warn("generate(style): 未登录");
             logGenerateAttempt(null, "style", request, false, "not_logged_in", null);
             return Result.error(401, BUSY_MSG);
         }
         if (!userRepository.deductPoints(userId, 2)) {
+            log.warn("generate(style): 积分不足, userId={}", userId);
             logGenerateAttempt(userId, "style", request, false, "points_not_enough", null);
             return Result.error(402, BUSY_MSG);
         }
@@ -130,14 +133,17 @@ public class GenerateController {
         String imageBase64 = body != null ? (String) body.get("imageBase64") : null;
         Long userId = getUserIdFromRequest(request);
         if (imageBase64 == null || imageBase64.isEmpty()) {
+            log.warn("generate(random): 缺少图片, userId={}", userId);
             logGenerateAttempt(userId, "random", request, false, "missing_image", null);
             return Result.error(400, BUSY_MSG);
         }
         if (userId == null) {
+            log.warn("generate(random): 未登录");
             logGenerateAttempt(null, "random", request, false, "not_logged_in", null);
             return Result.error(401, BUSY_MSG);
         }
         if (!userRepository.deductPoints(userId, 2)) {
+            log.warn("generate(random): 积分不足, userId={}", userId);
             logGenerateAttempt(userId, "random", request, false, "points_not_enough", null);
             return Result.error(402, BUSY_MSG);
         }
@@ -237,6 +243,7 @@ public class GenerateController {
                     .build();
             try (Response response = client.newCall(request).execute()) {
                 if (!response.isSuccessful() || response.body() == null) {
+                    log.error("Raphael history HTTP 失败: status={}, historyId={}", response.code(), historyId);
                     return Result.error(502, BUSY_MSG);
                 }
                 String respStr = response.body().string();
@@ -339,19 +346,24 @@ public class GenerateController {
         if (generateLogRepository == null) {
             return;
         }
-        String ip = null;
-        String ua = null;
-        if (request != null) {
-            ip = request.getHeader("X-Forwarded-For");
-            if (ip != null && ip.contains(",")) {
-                ip = ip.split(",")[0].trim();
+        try {
+            String ip = null;
+            String ua = null;
+            if (request != null) {
+                ip = request.getHeader("X-Forwarded-For");
+                if (ip != null && ip.contains(",")) {
+                    ip = ip.split(",")[0].trim();
+                }
+                if (ip == null || ip.isEmpty()) {
+                    ip = request.getRemoteAddr();
+                }
+                ua = request.getHeader("User-Agent");
             }
-            if (ip == null || ip.isEmpty()) {
-                ip = request.getRemoteAddr();
-            }
-            ua = request.getHeader("User-Agent");
+            generateLogRepository.insert(userId, type, ip, ua, success, reason, historyId, null);
+        } catch (Exception e) {
+            log.error("generate_log 表写入失败 userId={}, type={}, reason={}, historyId={}",
+                    userId, type, reason, historyId, e);
         }
-        generateLogRepository.insert(userId, type, ip, ua, success, reason, historyId, null);
     }
 
     /**
@@ -365,6 +377,7 @@ public class GenerateController {
         String historyId = hid != null ? hid.toString().trim() : null;
         String resultUrl = url != null ? url.toString().trim() : null;
         if (historyId == null || historyId.isEmpty()) {
+            log.warn("generate-log/result: 缺少 historyId");
             return Result.error(400, BUSY_MSG);
         }
         generateLogRepository.updateResultUrlByHistoryId(historyId, resultUrl);

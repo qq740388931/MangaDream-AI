@@ -459,9 +459,13 @@
               clearInterval(interval);
               appendResultRow(originalBase64, data);
               setGenerating(false);
+              var logHeaders = { 'Content-Type': 'application/json' };
+              if (currentUser && currentUser.token) {
+                logHeaders['X-Session-Token'] = currentUser.token;
+              }
               fetch('/api/generate-log/result', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: logHeaders,
                 body: JSON.stringify({ historyId: historyId, resultUrl: data })
               }).catch(function (err) { console.warn('generate-log/result', err); });
             }

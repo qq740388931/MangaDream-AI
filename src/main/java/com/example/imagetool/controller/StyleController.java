@@ -4,6 +4,8 @@ import com.example.imagetool.common.Result;
 import com.example.imagetool.entity.Style;
 import com.example.imagetool.entity.StylePrompt;
 import com.example.imagetool.service.StyleService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -17,6 +19,8 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1")
 public class StyleController {
+
+    private static final Logger log = LoggerFactory.getLogger(StyleController.class);
 
     private final StyleService styleService;
 
@@ -40,6 +44,7 @@ public class StyleController {
     public Result<StylePrompt> getPromptByStyleId(@PathVariable Integer styleId) {
         String prompt = styleService.getPromptByStyleId(styleId);
         if (prompt == null) {
+            log.warn("风格不存在或无提示词: styleId={}", styleId);
             return Result.error(404, "系统繁忙请稍后再试");
         }
         return Result.success(new StylePrompt(prompt));

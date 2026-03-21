@@ -1,4 +1,9 @@
 # MangaDream-AI 后端配置（端口 8080）
+logging:
+  level:
+    root: INFO
+    com.example.imagetool: INFO
+
 server:
   port: 8080
 

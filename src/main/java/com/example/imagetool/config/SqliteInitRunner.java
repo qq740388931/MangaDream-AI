@@ -125,6 +125,24 @@ public class SqliteInitRunner implements ApplicationRunner {
         } catch (Exception ignored) {
         }
 
+        jdbcTemplate.execute(
+                "CREATE TABLE IF NOT EXISTS api_access_log (" +
+                        "id INTEGER PRIMARY KEY AUTOINCREMENT," +
+                        "user_id INTEGER," +
+                        "user_email TEXT," +
+                        "path TEXT," +
+                        "method TEXT," +
+                        "query_string TEXT," +
+                        "ip TEXT," +
+                        "user_agent TEXT," +
+                        "request_body TEXT," +
+                        "response_body TEXT," +
+                        "http_status INTEGER," +
+                        "duration_ms INTEGER," +
+                        "created_at TEXT" +
+                        ")"
+        );
+
         // 尝试给旧的 users 表增加 points 列（如已存在会抛错，忽略即可）
         try {
             jdbcTemplate.execute("ALTER TABLE users ADD COLUMN points INTEGER");
@@ -141,8 +159,8 @@ public class SqliteInitRunner implements ApplicationRunner {
     }
 
     private void seedDataIfEmpty() {
-        // 确保已有用户至少有 10 积分
-        jdbcTemplate.update("UPDATE users SET points = 10 WHERE points IS NULL OR points < 10");
+        // 确保已有用户至少有 4 积分
+        jdbcTemplate.update("UPDATE users SET points = 4 WHERE points IS NULL OR points < 4");
 
         Integer count = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM inspiration_template", Integer.class);
         if (count == null || count > 0) {

@@ -22,7 +22,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     public Result<Void> handleException(Exception e) {
-        log.error("Unhandled server exception", e);
+        log.error("未捕获异常 [{}]: {}", e.getClass().getName(), e.getMessage(), e);
         return Result.error(500, BUSY_MSG);
     }
 }

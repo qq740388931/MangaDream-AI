@@ -75,10 +75,12 @@ public class AuthController {
     @PostMapping("/google")
     public Result<Map<String, Object>> googleLogin(@RequestBody Map<String, Object> body) {
         if (googleClientId == null || googleClientId.isEmpty()) {
+            log.error("Google 登录失败: 未配置 app.google.client-id");
             return Result.error(500, BUSY_MSG);
         }
         String idToken = body != null ? (String) body.get("idToken") : null;
         if (idToken == null || idToken.isEmpty()) {
+            log.warn("Google 登录失败: 请求体缺少 idToken");
             return Result.error(400, BUSY_MSG);
         }
         try {
@@ -135,9 +137,11 @@ public class AuthController {
     @PostMapping("/dev-login")
     public Result<Map<String, Object>> devLogin() {
         if (!devEnabled) {
+            log.warn("dev-login 被拒绝: app.auth.dev-enabled=false");
             return Result.error(403, BUSY_MSG);
         }
         if (devEmail == null || devEmail.isEmpty()) {
+            log.error("dev-login 失败: 未配置 app.auth.dev-email");
             return Result.error(500, BUSY_MSG);
         }
         try {

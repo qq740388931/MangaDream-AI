@@ -3,6 +3,8 @@ package com.example.imagetool.controller;
 import com.example.imagetool.common.Result;
 import com.example.imagetool.repository.MembershipRequestRepository;
 import com.example.imagetool.repository.UserRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -14,6 +16,8 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api")
 public class MembershipController {
+
+    private static final Logger log = LoggerFactory.getLogger(MembershipController.class);
 
     private final MembershipRequestRepository membershipRequestRepository;
     private final UserRepository userRepository;
@@ -28,6 +32,7 @@ public class MembershipController {
     public Result<Void> create(@RequestBody Map<String, Object> body, HttpServletRequest request) {
         String email = body != null ? (String) body.get("email") : null;
         if (email == null || email.trim().isEmpty()) {
+            log.warn("membership-request: 缺少 email");
             return Result.error(400, "系统繁忙请稍后再试");
         }
         String planCode = body != null ? (String) body.get("planCode") : null;
@@ -54,7 +59,12 @@ public class MembershipController {
             username = "匿名用户";
         }
 
-        membershipRequestRepository.insert(userId, username, email.trim(), planCode);
+        try {
+            membershipRequestRepository.insert(userId, username, email.trim(), planCode);
+        } catch (Exception e) {
+            log.error("membership-request 写入失败: userId={}, email={}", userId, email, e);
+            throw e;
+        }
         return Result.success(null);
     }
 }
