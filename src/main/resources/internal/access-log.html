@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>API 访问日志 — 后台</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: system-ui, sans-serif; background: #1a1a1a; color: #e8e8e8; min-height: 100vh; }
+    .wrap { max-width: 1600px; margin: 0 auto; padding: 16px; }
+    h1 { font-size: 1.15rem; margin: 0 0 8px; color: #ff9933; }
+    .hint { font-size: 12px; color: #888; margin: 0 0 12px; }
+    .admin-nav { display: flex; gap: 10px; margin: 0 0 16px; flex-wrap: wrap; align-items: center; }
+    .admin-nav a {
+      color: #ffe9b3; text-decoration: none; padding: 8px 14px; border-radius: 8px; border: 1px solid #444;
+      background: #333; font-size: 14px;
+    }
+    .admin-nav a:hover { background: #3a3a3a; }
+    .admin-nav a.active { border-color: #4f46e5; background: #2e2a66; color: #fff; }
+    .filters {
+      display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; margin-bottom: 14px;
+      padding: 12px; background: #242424; border: 1px solid #333; border-radius: 8px;
+    }
+    .filters label { font-size: 12px; color: #aaa; display: block; margin-bottom: 4px; }
+    .filters select, .filters input[type="text"] {
+      padding: 8px 10px; border-radius: 6px; border: 1px solid #444; background: #1a1a1a; color: #fff; font-size: 13px; min-width: 200px;
+    }
+    .filters input[type="text"] { min-width: 220px; }
+    .filters button {
+      padding: 8px 16px; border-radius: 6px; border: 1px solid #4f46e5; background: #4f46e5; color: #fff; cursor: pointer; font-size: 13px;
+    }
+    .filters button:hover { background: #4338ca; }
+    .toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 10px; font-size: 13px; color: #888; }
+    .toolbar button {
+      padding: 6px 12px; border-radius: 6px; border: 1px solid #444; background: #333; color: #e0e0e0; cursor: pointer;
+    }
+    .toolbar button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .toolbar input { width: 56px; padding: 4px 6px; background: #1a1a1a; border: 1px solid #444; color: #fff; border-radius: 4px; }
+    .err { color: #f87171; font-size: 13px; }
+    .scroll { overflow: auto; max-width: 100%; border: 1px solid #333; border-radius: 8px; }
+    table.log { border-collapse: collapse; font-size: 12px; width: 100%; min-width: 900px; }
+    table.log th, table.log td { border: 1px solid #444; padding: 6px 8px; vertical-align: top; text-align: left; }
+    table.log th { background: #2a2a2a; white-space: nowrap; position: sticky; top: 0; z-index: 1; }
+    table.log td { word-break: break-all; max-width: 280px; }
+    table.log td.path { max-width: 320px; font-family: ui-monospace, monospace; font-size: 11px; }
+    table.log td.num { white-space: nowrap; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <nav class="admin-nav">
+      <a href="/internal/db-browser">数据表</a>
+      <a href="/internal/db-browser/access-logs" class="active">API 访问日志</a>
+      <a href="/internal/db-browser/generate-logs">生成日志</a>
+      <button type="button" id="btnLogout" style="margin-left:auto;padding:8px 14px;border-radius:8px;border:1px solid #555;background:#333;color:#ccc;cursor:pointer;font-size:13px;">退出登录</button>
+    </nav>
+    <h1>api_access_log</h1>
+    <p class="hint">仅记录 <code>/api/**</code> 请求；类型按路径归类，可叠加关键词在路径、邮箱、IP 中搜索。</p>
+
+    <div class="filters">
+      <div>
+        <label for="selType">类型</label>
+        <select id="selType"></select>
+      </div>
+      <div>
+        <label for="inpQ">关键词</label>
+        <input type="text" id="inpQ" placeholder="路径 / 邮箱 / IP 模糊搜" />
+      </div>
+      <div>
+        <label>&nbsp;</label>
+        <button type="button" id="btnSearch">搜索</button>
+      </div>
+    </div>
+
+    <div class="toolbar">
+      <span id="pagerInfo"></span>
+      <button type="button" id="btnPrev">上一页</button>
+      <button type="button" id="btnNext">下一页</button>
+      <label>每页 <input type="number" id="pageSize" min="1" max="200" value="50" /> 条</label>
+      <button type="button" id="btnReload">刷新</button>
+    </div>
+    <p id="msg" class="hint"></p>
+
+    <div class="scroll">
+      <table class="log">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>时间</th>
+            <th>用户</th>
+            <th>路径</th>
+            <th>方法</th>
+            <th>查询串</th>
+            <th>状态</th>
+            <th>耗时(ms)</th>
+            <th>IP</th>
+            <th>UA（截断）</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+  </div>
+  <script>
+(function () {
+  var apiBase = '/internal/db-browser/api';
+  var page = 0;
+  var size = 50;
+  var lastTotal = 0;
+
+  function fetchJson(url, opts) {
+    opts = opts || {};
+    opts.credentials = 'include';
+    return fetch(url, opts).then(function (r) {
+      if (r.status === 401) {
+        window.location.href = '/internal/db-browser';
+        return Promise.reject(new Error('unauthorized'));
+      }
+      if (!r.ok) return r.text().then(function (t) { throw new Error(t || r.status); });
+      return r.json();
+    });
+  }
+
+  function fillTypes(types) {
+    var sel = document.getElementById('selType');
+    sel.innerHTML = '';
+    (types || []).forEach(function (t) {
+      var opt = document.createElement('option');
+      opt.value = t.id;
+      opt.textContent = t.label;
+      sel.appendChild(opt);
+    });
+  }
+
+  function render(rows) {
+    var tb = document.getElementById('tbody');
+    tb.innerHTML = '';
+    (rows || []).forEach(function (r) {
+      var tr = document.createElement('tr');
+      function td(cls, text) {
+        var d = document.createElement('td');
+        if (cls) d.className = cls;
+        d.textContent = text != null ? String(text) : '';
+        tr.appendChild(d);
+      }
+      td('num', r.id);
+      td('', r.createdAt);
+      td('', r.userEmail || (r.userId != null ? 'uid:' + r.userId : ''));
+      td('path', r.path);
+      td('num', r.method);
+      td('', r.queryString || '');
+      td('num', r.httpStatus);
+      td('num', r.durationMs);
+      td('', r.ip || '');
+      td('', r.userAgent || '');
+      tb.appendChild(tr);
+    });
+  }
+
+  function load() {
+    var type = document.getElementById('selType').value || 'ALL';
+    var q = document.getElementById('inpQ').value.trim();
+    var ps = parseInt(document.getElementById('pageSize').value, 10) || 50;
+    size = Math.min(200, Math.max(1, ps));
+    document.getElementById('pageSize').value = String(size);
+
+    var qs = 'page=' + page + '&size=' + size + '&type=' + encodeURIComponent(type);
+    if (q) qs += '&q=' + encodeURIComponent(q);
+    document.getElementById('msg').textContent = '加载中…';
+
+    fetchJson(apiBase + '/access-logs?' + qs)
+      .then(function (data) {
+        fillTypes(data.types);
+        document.getElementById('selType').value = type || 'ALL';
+        lastTotal = data.total;
+        var totalPages = Math.max(1, Math.ceil(data.total / data.size));
+        document.getElementById('pagerInfo').textContent = '共 ' + data.total + ' 条 · 第 ' + (data.page + 1) + ' / ' + totalPages + ' 页';
+        document.getElementById('btnPrev').disabled = data.page <= 0;
+        document.getElementById('btnNext').disabled = data.page + 1 >= totalPages;
+        render(data.rows);
+        document.getElementById('msg').textContent = '';
+      })
+      .catch(function (e) {
+        document.getElementById('msg').textContent = '加载失败: ' + e.message;
+        document.getElementById('msg').className = 'err';
+      });
+  }
+
+  document.getElementById('btnSearch').addEventListener('click', function () { page = 0; load(); });
+  document.getElementById('btnPrev').addEventListener('click', function () { if (page > 0) { page--; load(); } });
+  document.getElementById('btnNext').addEventListener('click', function () {
+    var totalPages = Math.max(1, Math.ceil(lastTotal / size));
+    if (page + 1 < totalPages) { page++; load(); }
+  });
+  document.getElementById('btnReload').addEventListener('click', function () { load(); });
+  document.getElementById('pageSize').addEventListener('change', function () { page = 0; load(); });
+
+  document.getElementById('btnLogout').addEventListener('click', function () {
+    fetch('/internal/db-browser/logout', { method: 'POST', credentials: 'include' })
+      .then(function () { window.location.href = '/internal/db-browser'; });
+  });
+
+  load();
+})();
+  </script>
+</body>
+</html>

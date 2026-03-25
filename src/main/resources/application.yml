@@ -22,6 +22,15 @@ spring:
 
 # 跨域：留空则允许任意来源（适合前后端分离或 CDN）。生产可改为仅你的站点，例如：
 # app.cors.allowed-origin-patterns: https://你的域名,https://www.你的域名
+# 内部 SQLite 浏览器：未配置密码/哈希时完全禁用（访问返回 404）。
+# 方式一：password-sha256 为登录密码的 SHA-256 十六进制（默认对应密码 135037）。
+# 方式二：环境变量 MANGADREAM_DB_BROWSER_PASSWORD 设为明文密码（优先于哈希）。
+mangadream:
+  db-browser:
+    password: ${MANGADREAM_DB_BROWSER_PASSWORD:}
+    # 勿用 password-sha256 作键名：Spring 占位符会把连字符当成减法，导致注入失败、整页 404
+    passwordSha256: ${MANGADREAM_DB_BROWSER_PASSWORD_SHA256:b67aa86914f3ac65cd8fddbfb60e89462d8a48046e2f9df9679986bd717555dd}
+
 app:
   cors:
     allowed-origin-patterns: ""

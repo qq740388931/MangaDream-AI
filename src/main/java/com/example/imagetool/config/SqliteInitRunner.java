@@ -111,6 +111,8 @@ public class SqliteInitRunner implements ApplicationRunner {
                         "reason TEXT," +
                         "history_id TEXT," +
                         "result_url TEXT," +
+                        "request_json TEXT," +
+                        "response_json TEXT," +
                         "created_at TEXT," +
                         "FOREIGN KEY(user_id) REFERENCES users(id)" +
                         ")"
@@ -122,6 +124,14 @@ public class SqliteInitRunner implements ApplicationRunner {
         }
         try {
             jdbcTemplate.execute("ALTER TABLE generate_log ADD COLUMN result_url TEXT");
+        } catch (Exception ignored) {
+        }
+        try {
+            jdbcTemplate.execute("ALTER TABLE generate_log ADD COLUMN request_json TEXT");
+        } catch (Exception ignored) {
+        }
+        try {
+            jdbcTemplate.execute("ALTER TABLE generate_log ADD COLUMN response_json TEXT");
         } catch (Exception ignored) {
         }
 
@@ -139,6 +149,18 @@ public class SqliteInitRunner implements ApplicationRunner {
                         "response_body TEXT," +
                         "http_status INTEGER," +
                         "duration_ms INTEGER," +
+                        "created_at TEXT" +
+                        ")"
+        );
+
+        jdbcTemplate.execute(
+                "CREATE TABLE IF NOT EXISTS login_audit_log (" +
+                        "id INTEGER PRIMARY KEY AUTOINCREMENT," +
+                        "event_type TEXT NOT NULL," +
+                        "user_id INTEGER," +
+                        "user_email TEXT," +
+                        "ip TEXT," +
+                        "user_agent TEXT," +
                         "created_at TEXT" +
                         ")"
         );

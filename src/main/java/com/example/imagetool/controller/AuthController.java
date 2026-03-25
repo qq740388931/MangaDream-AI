@@ -11,12 +11,14 @@ import okhttp3.Response;
 import org.springframework.beans.factory.annotation.Value;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import com.example.imagetool.repository.LoginAuditLogRepository;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.Proxy;
@@ -42,6 +44,7 @@ public class AuthController {
     private final OkHttpClient client;
     private final ObjectMapper mapper = new ObjectMapper();
     private final UserRepository userRepository;
+    private final LoginAuditLogRepository loginAuditLogRepository;
 
     @Value("${app.google.client-id:}")
     private String googleClientId;
@@ -56,9 +59,11 @@ public class AuthController {
     private String devName;
 
     public AuthController(UserRepository userRepository,
+                          LoginAuditLogRepository loginAuditLogRepository,
                           @Value("${app.proxy.host:}") String proxyHost,
                           @Value("${app.proxy.port:0}") int proxyPort) {
         this.userRepository = userRepository;
+        this.loginAuditLogRepository = loginAuditLogRepository;
         OkHttpClient.Builder builder = new OkHttpClient.Builder()
                 .connectTimeout(5, TimeUnit.SECONDS)
                 .readTimeout(5, TimeUnit.SECONDS);
@@ -80,7 +85,7 @@ public class AuthController {
     }
 
     @PostMapping("/google")
-    public Result<Map<String, Object>> googleLogin(@RequestBody Map<String, Object> body) {
+    public Result<Map<String, Object>> googleLogin(@RequestBody Map<String, Object> body, HttpServletRequest request) {
         log.warn("[GOOGLE_AUTH] Controller 收到 /api/auth/google（已进入业务方法）");
         if (googleClientId == null || googleClientId.isEmpty()) {
             log.error("Google 登录失败: 未配置 app.google.client-id");
@@ -132,6 +137,11 @@ public class AuthController {
             data.put("token", sessionToken);
             data.put("profile", profile);
             log.info("[GOOGLE_AUTH] 登录成功 userId={}, email={}", user.getId(), user.getEmail());
+            try {
+                loginAuditLogRepository.insert("GOOGLE_LOGIN", user.getId(), user.getEmail(), clientIp(request), userAgent(request));
+            } catch (Exception auditEx) {
+                log.warn("login_audit_log 写入失败", auditEx);
+            }
             return Result.success(data);
         } catch (Exception e) {
             log.error("[GOOGLE_AUTH] 登录过程异常", e);
@@ -144,7 +154,7 @@ public class AuthController {
      * 仅当 app.auth.dev-enabled=true 且配置了 dev-email 时生效。
      */
     @PostMapping("/dev-login")
-    public Result<Map<String, Object>> devLogin() {
+    public Result<Map<String, Object>> devLogin(HttpServletRequest request) {
         if (!devEnabled) {
             log.warn("dev-login 被拒绝: app.auth.dev-enabled=false");
             return Result.error(403, "dev-login is disabled (app.auth.dev-enabled=false)");
@@ -177,11 +187,35 @@ public class AuthController {
             profile.put("vipDaysLeft", calcVipDaysLeft(user.getVipExpireAt()));
             data.put("token", sessionToken);
             data.put("profile", profile);
+            try {
+                loginAuditLogRepository.insert("DEV_LOGIN", user.getId(), user.getEmail(), clientIp(request), userAgent(request));
+            } catch (Exception auditEx) {
+                log.warn("login_audit_log 写入失败", auditEx);
+            }
             return Result.success(data);
         } catch (Exception e) {
             log.error("dev 登录异常", e);
             return Result.error(500, ErrorMessageUtil.fromThrowable(e));
         }
+    }
+
+    private static String clientIp(HttpServletRequest request) {
+        String ip = request.getHeader("X-Forwarded-For");
+        if (ip != null && ip.contains(",")) {
+            ip = ip.split(",")[0].trim();
+        }
+        if (ip == null || ip.isEmpty()) {
+            ip = request.getRemoteAddr();
+        }
+        return ip;
+    }
+
+    private static String userAgent(HttpServletRequest request) {
+        String ua = request.getHeader("User-Agent");
+        if (ua == null) {
+            return null;
+        }
+        return ua.length() > 500 ? ua.substring(0, 500) + "…" : ua;
     }
 
     private Map<String, Object> verifyIdToken(String idToken) throws IOException {

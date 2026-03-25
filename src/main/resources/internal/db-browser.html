@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>数据表 — 后台</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: system-ui, sans-serif; background: #1a1a1a; color: #e8e8e8; min-height: 100vh; }
+    .wrap { display: flex; flex-direction: column; max-width: 1400px; margin: 0 auto; padding: 16px; gap: 12px; }
+    h1 { font-size: 1.1rem; margin: 0; color: #ff9933; }
+    .hint { font-size: 12px; color: #888; margin: 0; }
+    .layout { display: grid; grid-template-columns: 220px 1fr; gap: 16px; min-height: 60vh; }
+    @media (max-width: 800px) { .layout { grid-template-columns: 1fr; } }
+    .panel { background: #242424; border: 1px solid #333; border-radius: 8px; padding: 12px; }
+    .tables { list-style: none; margin: 0; padding: 0; max-height: 70vh; overflow: auto; }
+    .tables li { margin: 0; }
+    .tables .table-row { display: flex; gap: 6px; align-items: stretch; margin-bottom: 4px; }
+    .tables .table-name-btn {
+      flex: 1; min-width: 0; text-align: left; padding: 8px 10px;
+      background: #333; border: 1px solid #444; color: #e0e0e0; border-radius: 6px; cursor: pointer; font-size: 13px;
+    }
+    .tables .table-name-btn:hover { background: #3a3a3a; }
+    .tables .table-name-btn.active { border-color: #4f46e5; background: #2e2a66; color: #fff; }
+    .tables .btn-table-clear {
+      flex-shrink: 0; padding: 6px 8px; font-size: 11px; border-radius: 6px;
+      border: 1px solid #b91c1c; background: #5c1a1a; color: #e8e8e8; cursor: pointer; white-space: nowrap;
+    }
+    .tables .btn-table-clear:hover { background: #7f1d1d; }
+    .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 10px; font-size: 13px; }
+    .toolbar button {
+      padding: 6px 12px; border-radius: 6px; border: 1px solid #444; background: #333; color: #e0e0e0; cursor: pointer;
+    }
+    .toolbar button.btn-danger { border-color: #b91c1c; background: #5c1a1a; color: #fecaca; }
+    .toolbar button.btn-danger:hover { background: #7f1d1d; }
+    .toolbar button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .toolbar input { width: 56px; padding: 4px 6px; background: #1a1a1a; border: 1px solid #444; color: #fff; border-radius: 4px; }
+    .err { color: #f87171; font-size: 13px; }
+    .ok { color: #4ade80; font-size: 13px; }
+    .scroll { overflow: auto; max-width: 100%; }
+    table.data { border-collapse: collapse; font-size: 12px; width: max-content; max-width: 100%; }
+    table.data th, table.data td { border: 1px solid #444; padding: 4px 6px; vertical-align: top; }
+    table.data th { background: #2a2a2a; white-space: nowrap; }
+    table.data td input {
+      min-width: 80px; max-width: 360px; width: 100%; padding: 4px 6px;
+      background: #1a1a1a; border: 1px solid #555; color: #e8e8e8; border-radius: 4px; font-size: 12px;
+    }
+    table.data td input.ro { background: #2a2a2a; color: #999; }
+    .row-actions { white-space: nowrap; }
+    .row-actions button { padding: 4px 8px; font-size: 11px; border-radius: 4px; border: 1px solid #4f46e5; background: #4f46e5; color: #fff; cursor: pointer; }
+    .row-actions button:hover { background: #4338ca; }
+    .meta { color: #888; font-size: 12px; }
+    .admin-nav { display: flex; gap: 10px; margin: 0 0 12px; flex-wrap: wrap; align-items: center; }
+    .admin-nav a {
+      color: #ffe9b3; text-decoration: none; padding: 8px 14px; border-radius: 8px; border: 1px solid #444;
+      background: #333; font-size: 14px;
+    }
+    .admin-nav a:hover { background: #3a3a3a; }
+    .admin-nav a.active { border-color: #4f46e5; background: #2e2a66; color: #fff; }
+    .tabs { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+    .tab-btn {
+      padding: 8px 16px; border-radius: 8px; border: 1px solid #444; background: #333; color: #e0e0e0;
+      cursor: pointer; font-size: 14px;
+    }
+    .tab-btn:hover { background: #3a3a3a; }
+    .tab-btn.active { border-color: #4f46e5; background: #2e2a66; color: #fff; }
+    .tab-panel { width: 100%; }
+    #sqlInput {
+      width: 100%; min-height: 180px; padding: 12px; font-family: ui-monospace, Consolas, monospace; font-size: 13px;
+      background: #1a1a1a; color: #e8e8e8; border: 1px solid #444; border-radius: 8px; resize: vertical;
+    }
+    #btnSqlRun { padding: 8px 20px; border-radius: 8px; border: 1px solid #4f46e5; background: #4f46e5; color: #fff; cursor: pointer; font-size: 14px; }
+    #btnSqlRun:hover { background: #4338ca; }
+    .sql-out { margin-top: 12px; padding: 12px; background: #1a1a1a; border: 1px solid #333; border-radius: 8px; font-size: 12px; color: #aaa; white-space: pre-wrap; word-break: break-all; max-height: 200px; overflow: auto; }
+    table.sql-result { border-collapse: collapse; font-size: 12px; margin-top: 12px; }
+    table.sql-result th, table.sql-result td { border: 1px solid #444; padding: 6px 8px; vertical-align: top; }
+    table.sql-result th { background: #2a2a2a; }
+    #insertModal {
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,.65); z-index: 100;
+      align-items: center; justify-content: center; padding: 16px;
+    }
+    #insertModal .insert-dialog {
+      background: #242424; border: 1px solid #444; border-radius: 10px; padding: 16px; max-width: 520px; width: 100%; max-height: 80vh; overflow: auto;
+    }
+    #insertModal label { display: block; font-size: 12px; color: #888; margin-bottom: 4px; }
+    #insertModal input[type="text"] {
+      width: 100%; padding: 6px 8px; background: #1a1a1a; border: 1px solid #555; color: #e8e8e8; border-radius: 4px; font-size: 13px;
+    }
+    #insertModal .insert-actions { margin-top: 14px; display: flex; gap: 8px; justify-content: flex-end; }
+    #insertModal .insert-actions button { padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 13px; }
+    #insertModal #insertModalCancel { border: 1px solid #555; background: #333; color: #ccc; }
+    #insertModal #insertModalOk { border: 1px solid #4f46e5; background: #4f46e5; color: #fff; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <nav class="admin-nav">
+      <a href="/internal/db-browser" class="active">数据表</a>
+      <a href="/internal/db-browser/access-logs">API 访问日志</a>
+      <a href="/internal/db-browser/generate-logs">生成日志</a>
+      <button type="button" id="btnLogout" style="margin-left:auto;padding:8px 14px;border-radius:8px;border:1px solid #555;background:#333;color:#ccc;cursor:pointer;font-size:13px;">退出登录</button>
+    </nav>
+    <h1>SQLite 数据表</h1>
+    <p class="hint">内部后台；需先登录。<strong>查</strong>=浏览表；<strong>改</strong>=编辑后保存；<strong>删</strong>=删除本行；<strong>增</strong>=工具栏「新增一行」；建表、DROP 等 DDL 请在「SQL 控制台」执行。</p>
+
+    <div class="tabs">
+      <button type="button" class="tab-btn active" data-tab="browse">表数据</button>
+      <button type="button" class="tab-btn" data-tab="sql">SQL 控制台</button>
+    </div>
+
+    <div id="panel-browse" class="tab-panel">
+    <div class="layout">
+      <div class="panel">
+        <div class="meta" style="margin-bottom:8px;">表列表</div>
+        <ul id="tableList" class="tables"></ul>
+      </div>
+      <div class="panel">
+        <div id="tableTitle" class="meta">请选择左侧表</div>
+        <div class="toolbar" id="toolbar" style="display:none;">
+          <span id="pagerInfo"></span>
+          <button type="button" id="btnAddRow">新增一行</button>
+          <button type="button" id="btnClearTable" class="btn-danger">清空本表数据</button>
+          <button type="button" id="btnPrev">上一页</button>
+          <button type="button" id="btnNext">下一页</button>
+          <label>每页 <input type="number" id="pageSize" min="1" max="200" value="50" /> 行</label>
+          <button type="button" id="btnReload">刷新</button>
+        </div>
+        <p id="msg" class="meta"></p>
+        <div class="scroll" id="gridWrap"></div>
+      </div>
+    </div>
+    </div>
+
+    <div id="panel-sql" class="tab-panel" style="display: none;">
+      <div class="panel">
+        <p class="meta">一次执行<strong>一条</strong> SQL。SELECT / PRAGMA 结果最多 <strong>500</strong> 行；写操作返回 <code>updateCount</code>。DROP 等危险语句仅管理员自用，请谨慎。</p>
+        <textarea id="sqlInput" spellcheck="false" placeholder="例如：SELECT * FROM users LIMIT 10;"></textarea>
+        <div style="margin-top: 10px;">
+          <button type="button" id="btnSqlRun">执行</button>
+        </div>
+        <pre id="sqlOut" class="sql-out" style="display: none;"></pre>
+        <div class="scroll" id="sqlTableWrap"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="insertModal" role="dialog" aria-modal="true" aria-labelledby="insertModalTitle">
+    <div class="insert-dialog">
+      <div id="insertModalTitle" style="margin-bottom:12px;font-weight:600;">新增一行 — <span id="insertModalTable"></span></div>
+      <div id="insertFormFields"></div>
+      <div class="insert-actions">
+        <button type="button" id="insertModalCancel">取消</button>
+        <button type="button" id="insertModalOk">提交</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+(function () {
+  var apiBase = '/internal/db-browser/api';
+
+  function fetchJson(url, opts) {
+    opts = opts || {};
+    opts.credentials = 'include';
+    return fetch(url, opts).then(function (r) {
+      if (r.status === 401) {
+        window.location.href = '/internal/db-browser';
+        return Promise.reject(new Error('unauthorized'));
+      }
+      if (!r.ok) {
+        return r.text().then(function (t) { throw new Error(t || r.status); });
+      }
+      var ct = r.headers.get('content-type') || '';
+      if (ct.indexOf('application/json') >= 0) return r.json();
+      return r.text();
+    });
+  }
+
+  var currentTable = null;
+  var page = 0;
+  var size = 50;
+  var lastPayload = null;
+
+  function clearTableData(tableName) {
+    if (!tableName) return;
+    if (!window.confirm('确定清空表「' + tableName + '」的全部数据？不可恢复！')) return;
+    document.getElementById('msg').textContent = '清空中…';
+    document.getElementById('msg').className = 'meta';
+    fetchJson(apiBase + '/clear-table', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ table: tableName })
+    })
+      .then(function (d) {
+        document.getElementById('msg').textContent = '已清空 ' + (d.deleted != null ? d.deleted : 0) + ' 行';
+        document.getElementById('msg').className = 'ok';
+        loadTables();
+        if (currentTable === tableName) {
+          page = 0;
+          loadTable();
+        }
+      })
+      .catch(function (e) {
+        document.getElementById('msg').textContent = '清空失败: ' + e.message;
+        document.getElementById('msg').className = 'err';
+      });
+  }
+
+  function openInsertModal() {
+    if (!currentTable || !lastPayload) {
+      document.getElementById('msg').textContent = '请先选择表并等待数据加载完成';
+      document.getElementById('msg').className = 'err';
+      return;
+    }
+    var cols = lastPayload.columnNames || [];
+    var fields = document.getElementById('insertFormFields');
+    fields.innerHTML = '';
+    document.getElementById('insertModalTable').textContent = currentTable;
+    cols.forEach(function (c) {
+      if (c === '_rowid_') return;
+      var row = document.createElement('div');
+      row.style.marginBottom = '10px';
+      var lab = document.createElement('label');
+      lab.textContent = c;
+      var inp = document.createElement('input');
+      inp.type = 'text';
+      inp.dataset.col = c;
+      inp.autocomplete = 'off';
+      row.appendChild(lab);
+      row.appendChild(inp);
+      fields.appendChild(row);
+    });
+    document.getElementById('insertModal').style.display = 'flex';
+  }
+
+  function closeInsertModal() {
+    document.getElementById('insertModal').style.display = 'none';
+  }
+
+  function submitInsert() {
+    if (!currentTable) return;
+    var inputs = document.querySelectorAll('#insertFormFields input[data-col]');
+    var values = {};
+    inputs.forEach(function (inp) {
+      values[inp.dataset.col] = inp.value || '';
+    });
+    document.getElementById('msg').textContent = '提交中…';
+    document.getElementById('msg').className = 'meta';
+    fetchJson(apiBase + '/insert-row', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ table: currentTable, values: values })
+    })
+      .then(function (d) {
+        closeInsertModal();
+        var extra = d.lastInsertRowid != null ? '，rowid=' + d.lastInsertRowid : '';
+        document.getElementById('msg').textContent = '已新增' + extra;
+        document.getElementById('msg').className = 'ok';
+        page = 0;
+        loadTable();
+      })
+      .catch(function (e) {
+        document.getElementById('msg').textContent = '新增失败: ' + e.message;
+        document.getElementById('msg').className = 'err';
+      });
+  }
+
+  function loadTables() {
+    fetchJson(apiBase + '/tables')
+      .then(function (names) {
+        var ul = document.getElementById('tableList');
+        ul.innerHTML = '';
+        names.forEach(function (name) {
+          var li = document.createElement('li');
+          var row = document.createElement('div');
+          row.className = 'table-row';
+          var btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'table-name-btn';
+          btn.textContent = name;
+          btn.dataset.table = name;
+          btn.addEventListener('click', function () {
+            document.querySelectorAll('.tables .table-name-btn').forEach(function (b) { b.classList.remove('active'); });
+            btn.classList.add('active');
+            currentTable = name;
+            page = 0;
+            loadTable();
+          });
+          var btnClr = document.createElement('button');
+          btnClr.type = 'button';
+          btnClr.className = 'btn-table-clear';
+          btnClr.setAttribute('aria-label', '清空表 ' + name);
+          btnClr.textContent = '清空';
+          btnClr.addEventListener('click', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            clearTableData(name);
+          });
+          row.appendChild(btn);
+          row.appendChild(btnClr);
+          li.appendChild(row);
+          ul.appendChild(li);
+        });
+        if (currentTable) {
+          ul.querySelectorAll('.table-name-btn').forEach(function (b) {
+            if (b.dataset.table === currentTable) b.classList.add('active');
+          });
+        }
+      })
+      .catch(function (e) {
+        document.getElementById('msg').textContent = '加载表列表失败: ' + e.message;
+        document.getElementById('msg').className = 'err';
+      });
+  }
+
+  function loadTable() {
+    if (!currentTable) return;
+    var ps = parseInt(document.getElementById('pageSize').value, 10) || 50;
+    size = Math.min(200, Math.max(1, ps));
+    document.getElementById('pageSize').value = String(size);
+
+    var url = apiBase + '/table/' + encodeURIComponent(currentTable) + '?page=' + page + '&size=' + size;
+    document.getElementById('msg').textContent = '加载中…';
+    document.getElementById('msg').className = 'meta';
+
+    fetchJson(url)
+      .then(function (data) {
+        lastPayload = data;
+        document.getElementById('tableTitle').textContent = '表: ' + data.table + '（共 ' + data.total + ' 行）';
+        document.getElementById('toolbar').style.display = 'flex';
+        var totalPages = Math.max(1, Math.ceil(data.total / data.size));
+        document.getElementById('pagerInfo').textContent = '第 ' + (data.page + 1) + ' / ' + totalPages + ' 页';
+        document.getElementById('btnPrev').disabled = data.page <= 0;
+        document.getElementById('btnNext').disabled = data.page + 1 >= totalPages;
+        renderGrid(data);
+        document.getElementById('msg').textContent = '';
+      })
+      .catch(function (e) {
+        document.getElementById('msg').textContent = '加载失败: ' + e.message;
+        document.getElementById('msg').className = 'err';
+      });
+  }
+
+  function renderGrid(data) {
+    var wrap = document.getElementById('gridWrap');
+    wrap.innerHTML = '';
+    var cols = data.columnNames || [];
+    var rows = data.rows || [];
+
+    var table = document.createElement('table');
+    table.className = 'data';
+    var thead = document.createElement('thead');
+    var trh = document.createElement('tr');
+    var th0 = document.createElement('th');
+    th0.textContent = '_rowid_';
+    trh.appendChild(th0);
+    cols.forEach(function (c) {
+      var th = document.createElement('th');
+      var ci = (data.columns || []).find(function (x) { return x.name === c; });
+      th.textContent = c + (ci && ci.type ? ' (' + ci.type + ')' : '');
+      trh.appendChild(th);
+    });
+    var thAct = document.createElement('th');
+    thAct.textContent = '操作';
+    trh.appendChild(thAct);
+    thead.appendChild(trh);
+    table.appendChild(thead);
+
+    var tbody = document.createElement('tbody');
+    rows.forEach(function (row, ri) {
+      var tr = document.createElement('tr');
+      var td0 = document.createElement('td');
+      var i0 = document.createElement('input');
+      i0.type = 'text';
+      i0.className = 'ro';
+      i0.readOnly = true;
+      i0.value = row._rowid_ != null ? String(row._rowid_) : '';
+      td0.appendChild(i0);
+      tr.appendChild(td0);
+
+      cols.forEach(function (c) {
+        var td = document.createElement('td');
+        var inp = document.createElement('input');
+        inp.type = 'text';
+        var v = row[c];
+        if (v != null && String(v).indexOf('[blob hex]') === 0) {
+          inp.readOnly = true;
+          inp.className = 'ro';
+        }
+        inp.value = v != null ? String(v) : '';
+        inp.dataset.col = c;
+        td.appendChild(inp);
+        tr.appendChild(td);
+      });
+
+      var tdAct = document.createElement('td');
+      tdAct.className = 'row-actions';
+      var btnSave = document.createElement('button');
+      btnSave.type = 'button';
+      btnSave.textContent = '保存';
+      btnSave.addEventListener('click', function () {
+        saveRow(tr, data.table);
+      });
+      var btnDel = document.createElement('button');
+      btnDel.type = 'button';
+      btnDel.textContent = '删除';
+      btnDel.style.marginLeft = '6px';
+      btnDel.style.borderColor = '#b91c1c';
+      btnDel.style.background = '#7f1d1d';
+      btnDel.addEventListener('click', function () {
+        deleteRow(tr, data.table);
+      });
+      tdAct.appendChild(btnSave);
+      tdAct.appendChild(btnDel);
+      tr.appendChild(tdAct);
+
+      tbody.appendChild(tr);
+    });
+    table.appendChild(tbody);
+    wrap.appendChild(table);
+  }
+
+  function deleteRow(tr, tableName) {
+    var rowidInp = tr.querySelector('input.ro');
+    var rowid = rowidInp && rowidInp.value ? parseInt(rowidInp.value, 10) : NaN;
+    if (!rowid || rowid !== rowid) {
+      alert('无效的 rowid');
+      return;
+    }
+    if (!window.confirm('确定删除 rowid=' + rowid + ' ？不可恢复。')) return;
+    document.getElementById('msg').textContent = '删除中…';
+    document.getElementById('msg').className = 'meta';
+    fetch(apiBase + '/delete-row', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ table: tableName, rowid: rowid })
+    })
+      .then(function (r) {
+        if (r.status === 401) {
+          window.location.href = '/internal/db-browser';
+          return Promise.reject(new Error('unauthorized'));
+        }
+        if (!r.ok) return r.text().then(function (t) { throw new Error(t || r.status); });
+        return r.json();
+      })
+      .then(function () {
+        document.getElementById('msg').textContent = '已删除';
+        document.getElementById('msg').className = 'ok';
+        loadTable();
+      })
+      .catch(function (e) {
+        document.getElementById('msg').textContent = '删除失败: ' + e.message;
+        document.getElementById('msg').className = 'err';
+      });
+  }
+
+  function saveRow(tr, tableName) {
+    var inputs = tr.querySelectorAll('input[data-col]');
+    var values = {};
+    inputs.forEach(function (inp) {
+      var c = inp.dataset.col;
+      if (inp.readOnly) return;
+      values[c] = inp.value;
+    });
+    var rowidInp = tr.querySelector('input.ro');
+    var rowid = rowidInp && rowidInp.value ? parseInt(rowidInp.value, 10) : NaN;
+    if (!rowid || rowid !== rowid) {
+      alert('无效的 rowid');
+      return;
+    }
+    document.getElementById('msg').textContent = '保存中…';
+    document.getElementById('msg').className = 'meta';
+
+    fetch(apiBase + '/update-row', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ table: tableName, rowid: rowid, values: values })
+    })
+      .then(function (r) {
+        if (r.status === 401) {
+          window.location.href = '/internal/db-browser';
+          return Promise.reject(new Error('unauthorized'));
+        }
+        if (!r.ok) return r.text().then(function (t) { throw new Error(t || r.status); });
+        return r.json();
+      })
+      .then(function () {
+        document.getElementById('msg').textContent = '已保存';
+        document.getElementById('msg').className = 'ok';
+        loadTable();
+      })
+      .catch(function (e) {
+        document.getElementById('msg').textContent = '保存失败: ' + e.message;
+        document.getElementById('msg').className = 'err';
+      });
+  }
+
+  document.getElementById('btnPrev').addEventListener('click', function () {
+    if (page > 0) { page--; loadTable(); }
+  });
+  document.getElementById('btnNext').addEventListener('click', function () {
+    if (lastPayload) {
+      var totalPages = Math.max(1, Math.ceil(lastPayload.total / lastPayload.size));
+      if (page + 1 < totalPages) { page++; loadTable(); }
+    }
+  });
+  document.getElementById('btnReload').addEventListener('click', function () { loadTable(); });
+  document.getElementById('pageSize').addEventListener('change', function () { page = 0; loadTable(); });
+
+  document.getElementById('btnAddRow').addEventListener('click', function () { openInsertModal(); });
+  document.getElementById('btnClearTable').addEventListener('click', function () {
+    if (currentTable) clearTableData(currentTable);
+  });
+  document.getElementById('insertModalCancel').addEventListener('click', function () { closeInsertModal(); });
+  document.getElementById('insertModalOk').addEventListener('click', function () { submitInsert(); });
+  document.getElementById('insertModal').addEventListener('click', function (e) {
+    if (e.target.id === 'insertModal') closeInsertModal();
+  });
+
+  document.getElementById('btnLogout').addEventListener('click', function () {
+    fetch('/internal/db-browser/logout', { method: 'POST', credentials: 'include' })
+      .then(function () { window.location.href = '/internal/db-browser'; });
+  });
+
+  document.querySelectorAll('.tab-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var tab = btn.getAttribute('data-tab');
+      document.querySelectorAll('.tab-btn').forEach(function (b) { b.classList.toggle('active', b === btn); });
+      document.getElementById('panel-browse').style.display = tab === 'browse' ? '' : 'none';
+      document.getElementById('panel-sql').style.display = tab === 'sql' ? '' : 'none';
+    });
+  });
+
+  function renderSqlResult(data) {
+    var wrap = document.getElementById('sqlTableWrap');
+    var pre = document.getElementById('sqlOut');
+    wrap.innerHTML = '';
+    pre.style.display = 'none';
+    if (!data) {
+      pre.textContent = '(无数据)';
+      pre.style.display = 'block';
+      return;
+    }
+    if (data.kind === 'resultSet') {
+      var cols = data.columns || [];
+      var rows = data.rows || [];
+      var table = document.createElement('table');
+      table.className = 'sql-result';
+      var thead = document.createElement('thead');
+      var trh = document.createElement('tr');
+      cols.forEach(function (c) {
+        var th = document.createElement('th');
+        th.textContent = c;
+        trh.appendChild(th);
+      });
+      thead.appendChild(trh);
+      table.appendChild(thead);
+      var tbody = document.createElement('tbody');
+      rows.forEach(function (row) {
+        var tr = document.createElement('tr');
+        row.forEach(function (cell) {
+          var td = document.createElement('td');
+          td.textContent = cell != null ? String(cell) : '';
+          tr.appendChild(td);
+        });
+        tbody.appendChild(tr);
+      });
+      table.appendChild(tbody);
+      wrap.appendChild(table);
+      var meta = [];
+      if (data.truncated) meta.push(data.hint || '结果已截断');
+      pre.textContent = meta.length ? meta.join('\n') : '';
+      pre.style.display = meta.length ? 'block' : 'none';
+    } else if (data.kind === 'update') {
+      pre.textContent = '执行成功。影响行数 updateCount = ' + (data.updateCount != null ? data.updateCount : '0');
+      pre.style.display = 'block';
+    } else {
+      pre.textContent = JSON.stringify(data, null, 2);
+      pre.style.display = 'block';
+    }
+  }
+
+  document.getElementById('btnSqlRun').addEventListener('click', function () {
+    var sql = (document.getElementById('sqlInput').value || '').trim();
+    var pre = document.getElementById('sqlOut');
+    var wrap = document.getElementById('sqlTableWrap');
+    if (!sql) {
+      pre.textContent = '请输入 SQL';
+      pre.style.display = 'block';
+      wrap.innerHTML = '';
+      return;
+    }
+    pre.style.display = 'none';
+    wrap.innerHTML = '';
+    fetchJson(apiBase + '/sql', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sql: sql })
+    })
+      .then(function (data) {
+        renderSqlResult(data);
+        if (sql.toLowerCase().indexOf('insert') === 0 || sql.toLowerCase().indexOf('delete') === 0 || sql.toLowerCase().indexOf('update') === 0 || sql.toLowerCase().indexOf('create') === 0 || sql.toLowerCase().indexOf('drop') === 0) {
+          loadTables();
+        }
+      })
+      .catch(function (e) {
+        document.getElementById('sqlTableWrap').innerHTML = '';
+        var pr = document.getElementById('sqlOut');
+        pr.textContent = '错误: ' + e.message;
+        pr.style.display = 'block';
+      });
+  });
+
+  loadTables();
+})();
+  </script>
+</body>
+</html>

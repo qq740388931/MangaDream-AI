@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DB Browser — 登录</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
+      background: #1a1a1a; color: #e8e8e8; font-family: system-ui, sans-serif; }
+    .box { width: 100%; max-width: 360px; padding: 28px; background: #242424; border: 1px solid #333; border-radius: 12px; }
+    h1 { font-size: 1.1rem; margin: 0 0 8px; color: #ff9933; }
+    p { margin: 0 0 16px; font-size: 13px; color: #888; }
+    label { display: block; font-size: 13px; margin-bottom: 6px; color: #bbb; }
+    input[type="password"] {
+      width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid #444;
+      background: #1a1a1a; color: #fff; font-size: 15px; margin-bottom: 14px;
+    }
+    button {
+      width: 100%; padding: 10px; border: none; border-radius: 8px; background: #4f46e5; color: #fff;
+      font-size: 15px; cursor: pointer;
+    }
+    button:hover { background: #4338ca; }
+    button:disabled { opacity: 0.6; cursor: not-allowed; }
+    .err { color: #f87171; font-size: 13px; margin-top: 10px; min-height: 1.2em; }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <h1>内部数据库浏览</h1>
+    <p>请输入访问密码后继续。</p>
+    <form id="f" autocomplete="off">
+      <label for="pwd">密码</label>
+      <input type="password" id="pwd" name="pwd" required autofocus />
+      <button type="submit" id="btn">登录</button>
+      <div id="err" class="err"></div>
+    </form>
+  </div>
+  <script>
+  document.getElementById('f').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var pwd = document.getElementById('pwd').value;
+    var btn = document.getElementById('btn');
+    var err = document.getElementById('err');
+    err.textContent = '';
+    btn.disabled = true;
+    fetch('/internal/db-browser/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ password: pwd })
+    })
+      .then(function (r) {
+        if (r.ok) {
+          window.location.href = '/internal/db-browser';
+          return;
+        }
+        return r.text().then(function (t) { throw new Error(t || r.status); });
+      })
+      .catch(function (x) {
+        err.textContent = '登录失败，请检查密码。';
+        btn.disabled = false;
+      });
+  });
+  </script>
+</body>
+</html>

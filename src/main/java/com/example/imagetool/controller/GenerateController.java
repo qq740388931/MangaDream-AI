@@ -23,6 +23,7 @@ import org.slf4j.LoggerFactory;
 
 import javax.servlet.http.HttpServletRequest;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
@@ -75,20 +76,29 @@ public class GenerateController {
         String imageBase64 = body != null ? (String) body.get("imageBase64") : null;
         Object tid = body != null ? body.get("templateId") : null;
         int templateId = tid instanceof Number ? ((Number) tid).intValue() : (tid != null ? Integer.parseInt(tid.toString()) : 0);
+        int width = body != null && body.get("width") != null ? ((Number) body.get("width")).intValue() : DEFAULT_WIDTH;
+        int height = body != null && body.get("height") != null ? ((Number) body.get("height")).intValue() : DEFAULT_HEIGHT;
         Long userId = getUserIdFromRequest(request);
+
         if (imageBase64 == null || imageBase64.isEmpty()) {
             log.warn("generate(style): 缺少图片, userId={}", userId);
-            logGenerateAttempt(userId, "style", request, false, "missing_image", null);
+            String reqJ = buildStyleRequestSnapshot(body, templateId, width, height, imageBase64, null);
+            String respJ = snapResponse(400, "Missing image (imageBase64)", null);
+            logGenerateFull(userId, "style", request, false, "missing_image", null, reqJ, respJ);
             return Result.error(400, "Missing image (imageBase64)");
         }
         if (userId == null) {
             log.warn("generate(style): 未登录");
-            logGenerateAttempt(null, "style", request, false, "not_logged_in", null);
+            String reqJ = buildStyleRequestSnapshot(body, templateId, width, height, imageBase64, null);
+            String respJ = snapResponse(401, "Please sign in (send X-Session-Token header)", null);
+            logGenerateFull(null, "style", request, false, "not_logged_in", null, reqJ, respJ);
             return Result.error(401, "Please sign in (send X-Session-Token header)");
         }
         if (!userRepository.deductPoints(userId, 2)) {
             log.warn("generate(style): 积分不足, userId={}", userId);
-            logGenerateAttempt(userId, "style", request, false, "points_not_enough", null);
+            String reqJ = buildStyleRequestSnapshot(body, templateId, width, height, imageBase64, null);
+            String respJ = snapResponse(402, "Insufficient points. Please upgrade to membership or try again after tomorrow's free points are granted.", null);
+            logGenerateFull(userId, "style", request, false, "points_not_enough", null, reqJ, respJ);
             return Result.error(402, "Insufficient points. Please upgrade to membership or try again after tomorrow's free points are granted.");
         }
         Integer pointsAfterDeduct = null;
@@ -101,24 +111,28 @@ public class GenerateController {
         if (prompt == null || prompt.isEmpty()) {
             prompt = RANDOM_DEFAULT_PROMPT;
         }
-        int width = body != null && body.get("width") != null ? ((Number) body.get("width")).intValue() : DEFAULT_WIDTH;
-        int height = body != null && body.get("height") != null ? ((Number) body.get("height")).intValue() : DEFAULT_HEIGHT;
+        String reqSnapshot = buildStyleRequestSnapshot(body, templateId, width, height, imageBase64, prompt);
         try {
             Map<String, Object> data = submitRaphaelTask(imageBase64, prompt, width, height);
             if (pointsAfterDeduct != null) {
                 data.put("remainingPoints", pointsAfterDeduct);
             }
             String historyId = data.get("historyId") != null ? data.get("historyId").toString() : null;
-            logGenerateAttempt(userId, "style", request, true, "ok", historyId);
+            String respJ = snapResponse(200, "success", data);
+            logGenerateFull(userId, "style", request, true, "ok", historyId, reqSnapshot, respJ);
             return Result.success(data);
         } catch (IllegalStateException e) {
-            logGenerateAttempt(userId, "style", request, false, "submit_error: " + e.getMessage(), null);
+            String msg = ErrorMessageUtil.fromThrowable(e);
+            String respJ = snapResponse(503, msg, null);
+            logGenerateFull(userId, "style", request, false, "submit_error: " + e.getMessage(), null, reqSnapshot, respJ);
             log.error("Generate(style) submit error", e);
-            return Result.error(503, ErrorMessageUtil.fromThrowable(e));
+            return Result.error(503, msg);
         } catch (Exception e) {
-            logGenerateAttempt(userId, "style", request, false, "submit_error: " + e.getMessage(), null);
+            String msg = ErrorMessageUtil.fromThrowable(e);
+            String respJ = snapResponse(500, msg, null);
+            logGenerateFull(userId, "style", request, false, "submit_error: " + e.getMessage(), null, reqSnapshot, respJ);
             log.error("Generate(style) unexpected error", e);
-            return Result.error(500, ErrorMessageUtil.fromThrowable(e));
+            return Result.error(500, msg);
         }
     }
 
@@ -131,20 +145,29 @@ public class GenerateController {
     public Result<Map<String, Object>> generateRandom(@org.springframework.web.bind.annotation.RequestBody Map<String, Object> body,
                                                       HttpServletRequest request) {
         String imageBase64 = body != null ? (String) body.get("imageBase64") : null;
+        int width = body != null && body.get("width") != null ? ((Number) body.get("width")).intValue() : DEFAULT_WIDTH;
+        int height = body != null && body.get("height") != null ? ((Number) body.get("height")).intValue() : DEFAULT_HEIGHT;
         Long userId = getUserIdFromRequest(request);
+
         if (imageBase64 == null || imageBase64.isEmpty()) {
             log.warn("generate(random): 缺少图片, userId={}", userId);
-            logGenerateAttempt(userId, "random", request, false, "missing_image", null);
+            String reqJ = buildRandomRequestSnapshot(body, width, height, imageBase64);
+            String respJ = snapResponse(400, "Missing image (imageBase64)", null);
+            logGenerateFull(userId, "random", request, false, "missing_image", null, reqJ, respJ);
             return Result.error(400, "Missing image (imageBase64)");
         }
         if (userId == null) {
             log.warn("generate(random): 未登录");
-            logGenerateAttempt(null, "random", request, false, "not_logged_in", null);
+            String reqJ = buildRandomRequestSnapshot(body, width, height, imageBase64);
+            String respJ = snapResponse(401, "Please sign in (send X-Session-Token header)", null);
+            logGenerateFull(null, "random", request, false, "not_logged_in", null, reqJ, respJ);
             return Result.error(401, "Please sign in (send X-Session-Token header)");
         }
         if (!userRepository.deductPoints(userId, 2)) {
             log.warn("generate(random): 积分不足, userId={}", userId);
-            logGenerateAttempt(userId, "random", request, false, "points_not_enough", null);
+            String reqJ = buildRandomRequestSnapshot(body, width, height, imageBase64);
+            String respJ = snapResponse(402, "Insufficient points. Please upgrade to membership or try again after tomorrow's free points are granted.", null);
+            logGenerateFull(userId, "random", request, false, "points_not_enough", null, reqJ, respJ);
             return Result.error(402, "Insufficient points. Please upgrade to membership or try again after tomorrow's free points are granted.");
         }
         Integer pointsAfterDeduct = null;
@@ -153,25 +176,29 @@ public class GenerateController {
             pointsAfterDeduct = u != null ? u.getPoints() : null;
         } catch (Exception ignored) {
         }
-        int width = body != null && body.get("width") != null ? ((Number) body.get("width")).intValue() : DEFAULT_WIDTH;
-        int height = body != null && body.get("height") != null ? ((Number) body.get("height")).intValue() : DEFAULT_HEIGHT;
 
+        String reqSnapshot = buildRandomRequestSnapshot(body, width, height, imageBase64);
         try {
             Map<String, Object> data = submitRaphaelTask(imageBase64, RANDOM_DEFAULT_PROMPT, width, height);
             if (pointsAfterDeduct != null) {
                 data.put("remainingPoints", pointsAfterDeduct);
             }
             String historyId = data.get("historyId") != null ? data.get("historyId").toString() : null;
-            logGenerateAttempt(userId, "random", request, true, "ok", historyId);
+            String respJ = snapResponse(200, "success", data);
+            logGenerateFull(userId, "random", request, true, "ok", historyId, reqSnapshot, respJ);
             return Result.success(data);
         } catch (IllegalStateException e) {
-            logGenerateAttempt(userId, "random", request, false, "submit_error: " + e.getMessage(), null);
+            String msg = ErrorMessageUtil.fromThrowable(e);
+            String respJ = snapResponse(503, msg, null);
+            logGenerateFull(userId, "random", request, false, "submit_error: " + e.getMessage(), null, reqSnapshot, respJ);
             log.error("Generate(random) submit error", e);
-            return Result.error(503, ErrorMessageUtil.fromThrowable(e));
+            return Result.error(503, msg);
         } catch (Exception e) {
-            logGenerateAttempt(userId, "random", request, false, "submit_error: " + e.getMessage(), null);
+            String msg = ErrorMessageUtil.fromThrowable(e);
+            String respJ = snapResponse(500, msg, null);
+            logGenerateFull(userId, "random", request, false, "submit_error: " + e.getMessage(), null, reqSnapshot, respJ);
             log.error("Generate(random) unexpected error", e);
-            return Result.error(500, ErrorMessageUtil.fromThrowable(e));
+            return Result.error(500, msg);
         }
     }
 
@@ -209,13 +236,17 @@ public class GenerateController {
                 .build();
 
         try (Response response = client.newCall(raphaelRequest).execute()) {
-            if (!response.isSuccessful() || response.body() == null) {
-                throw new RuntimeException("Raphael submit failed: HTTP " + response.code());
+            String respStr = response.body() != null ? response.body().string() : "";
+            if (!response.isSuccessful()) {
+                String snippet = respStr.length() > 800 ? respStr.substring(0, 800) + "…" : respStr;
+                throw new RuntimeException("Raphael submit failed: HTTP " + response.code()
+                        + (snippet.isEmpty() ? "" : ", body=" + snippet));
             }
-            String respStr = response.body().string();
             TaskSubmitResponse parsed = mapper.readValue(respStr, TaskSubmitResponse.class);
             if (!parsed.isSuccess() || parsed.getData() == null) {
-                throw new RuntimeException(parsed.getMessage() != null ? parsed.getMessage() : "Submit failed");
+                String snippet = respStr.length() > 800 ? respStr.substring(0, 800) + "…" : respStr;
+                throw new RuntimeException((parsed.getMessage() != null ? parsed.getMessage() : "Submit failed")
+                        + ", raw=" + snippet);
             }
             Map<String, Object> data = new HashMap<>();
             data.put("historyId", parsed.getData().getHistoryId());
@@ -337,12 +368,14 @@ public class GenerateController {
         return userRepository.findUserIdByToken(token);
     }
 
-    private void logGenerateAttempt(Long userId,
-                                    String type,
-                                    HttpServletRequest request,
-                                    boolean success,
-                                    String reason,
-                                    String historyId) {
+    private void logGenerateFull(Long userId,
+                                 String type,
+                                 HttpServletRequest request,
+                                 boolean success,
+                                 String reason,
+                                 String historyId,
+                                 String requestJson,
+                                 String responseJson) {
         if (generateLogRepository == null) {
             return;
         }
@@ -359,10 +392,69 @@ public class GenerateController {
                 }
                 ua = request.getHeader("User-Agent");
             }
-            generateLogRepository.insert(userId, type, ip, ua, success, reason, historyId, null);
+            generateLogRepository.insert(userId, type, ip, ua, success, reason, historyId, null, requestJson, responseJson);
         } catch (Exception e) {
             log.error("generate_log 表写入失败 userId={}, type={}, reason={}, historyId={}",
                     userId, type, reason, historyId, e);
+        }
+    }
+
+    /** 不落库图片 base64，仅记录长度与业务参数 */
+    private String buildStyleRequestSnapshot(Map<String, Object> body,
+                                             int templateId,
+                                             int width,
+                                             int height,
+                                             String imageBase64,
+                                             String promptResolved) {
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("kind", "style");
+        if (body != null && body.get("templateId") != null) {
+            m.put("templateId", body.get("templateId"));
+        } else {
+            m.put("templateId", templateId);
+        }
+        m.put("width", width);
+        m.put("height", height);
+        m.put("imageBase64Length", imageBase64 != null ? imageBase64.length() : 0);
+        if (promptResolved != null) {
+            m.put("promptLength", promptResolved.length());
+        }
+        try {
+            return mapper.writeValueAsString(m);
+        } catch (Exception e) {
+            return "{}";
+        }
+    }
+
+    private String buildRandomRequestSnapshot(Map<String, Object> body,
+                                              int width,
+                                              int height,
+                                              String imageBase64) {
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("kind", "random");
+        m.put("width", width);
+        m.put("height", height);
+        m.put("imageBase64Length", imageBase64 != null ? imageBase64.length() : 0);
+        m.put("defaultPromptLength", RANDOM_DEFAULT_PROMPT.length());
+        try {
+            return mapper.writeValueAsString(m);
+        } catch (Exception e) {
+            return "{}";
+        }
+    }
+
+    /** 与前端收到的 Result JSON 一致：code、msg、data（成功时） */
+    private String snapResponse(int code, String msg, Map<String, Object> data) {
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("code", code);
+        m.put("msg", msg != null ? msg : "");
+        if (data != null && !data.isEmpty()) {
+            m.put("data", data);
+        }
+        try {
+            return mapper.writeValueAsString(m);
+        } catch (Exception e) {
+            return "{\"code\":" + code + "}";
         }
     }
 
