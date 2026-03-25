@@ -44,7 +44,10 @@
         <img id="uploadPreviewImg" class="upload-preview__img" src="" alt="Upload preview" />
         <div class="upload-preview__actions">
           <button type="button" id="btnReselect" class="btn btn--outline">Choose another</button>
-          <button type="button" id="btnRandom" class="btn btn--primary" title="Generate a random style for this photo">Random generate</button>
+          <span class="btn-with-cost">
+            <button type="button" id="btnRandom" class="btn btn--primary" title="Generate a random style for this photo (costs 2 points)">Random generate</button>
+            <span class="btn-with-cost__badge" aria-hidden="true"><span class="btn-with-cost__coin"></span><span class="btn-with-cost__pts">2</span></span>
+          </span>
         </div>
         <div id="loadingIndicator" class="loading-indicator" style="display: none;">
           <span class="loading-indicator__spinner"></span>
@@ -81,7 +84,7 @@
       <p class="modal__text">Generate image in this style?</p>
       <div class="modal__actions">
         <button type="button" id="modalCancel" class="btn btn--secondary">Cancel</button>
-        <button type="button" id="modalConfirm" class="btn btn--primary" onclick="typeof window.onConfirmGenerate=== 'function' && window.onConfirmGenerate()">Confirm</button>
+        <button type="button" id="modalConfirm" class="btn btn--primary" onclick="typeof window.onConfirmGenerate=== 'function' && window.onConfirmGenerate()">Confirm (2 points)</button>
       </div>
     </div>
   </div>

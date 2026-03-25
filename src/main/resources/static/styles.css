@@ -323,6 +323,47 @@ html, body {
   cursor: not-allowed;
 }
 
+/* 主按钮右上角积分角标（参考：半透明胶囊 + 小圆币 + 数字） */
+.btn-with-cost {
+  position: relative;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.btn-with-cost__badge {
+  position: absolute;
+  top: -6px;
+  right: -8px;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 7px 2px 5px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.22);
+  backdrop-filter: blur(4px);
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.35);
+  font-size: 11px;
+  font-weight: 600;
+  color: #fff;
+  line-height: 1;
+  pointer-events: none;
+}
+
+.btn-with-cost__coin {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: radial-gradient(circle at 30% 30%, #ffe08a, #c9a227 55%, #8a6a1a);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.35);
+}
+
+.btn-with-cost__pts {
+  min-width: 0.6em;
+  text-align: center;
+}
+
 .loading-indicator {
   margin-top: 8px;
   display: inline-flex;
@@ -525,20 +566,20 @@ html, body {
 
 .inspiration__grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 16px;
   width: 100%;
   max-width: 1200px;
 }
 
+/* 竖图比例 2:3（常见景点/海报竖构图），宽由网格列宽决定，高按比例变高 */
 .inspiration-card {
   width: 100%;
-  height: 280px;
+  aspect-ratio: 2 / 3;
   background-color: #2a2a2a;
   border-radius: 8px;
   overflow: hidden;
-  display: flex;
-  flex-direction: column;
+  position: relative;
   cursor: pointer;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
   border: 1px solid #333;
@@ -550,10 +591,12 @@ html, body {
 }
 
 .inspiration-card__img {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
-  min-height: 0;
   object-fit: cover;
+  object-position: center;
   background-color: #333;
 }
 

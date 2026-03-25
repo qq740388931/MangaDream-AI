@@ -37,7 +37,7 @@ public class MembershipController {
         }
         String planCode = body != null ? (String) body.get("planCode") : null;
         if (planCode == null || planCode.trim().isEmpty()) {
-            planCode = "monthly_1000_points";
+            planCode = "usd_1_100_points";
         }
 
         Long userId = null;
