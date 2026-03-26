@@ -36,7 +36,7 @@ app:
     allowed-origin-patterns: ""
   raphael:
     # Raphael 浏览器 Cookie 整串；不配则生成类接口返回 503
-    bearer-token: g_state={"i_l":0,"i_ll":1774009238658,"i_e":{"enable_itp_optimization":0},"i_b":"RQd6omPpqNgt3Dh6duWFXfBrPduillxhEGxmJ7okpvk"}; __Secure-better-auth.session_token=MCnHQmNFxytZiTI5dTDUpU0UllLOp6OS.Sb4Cwf55%2FgGAzgSGdg2sWcnRc69SFkPMiNpCPEj4RJA%3D; cf_clearance=AKapn_VUoP6eMA79ucaQSnRKH_QfFxizx6xQ4KDxBXE-1774549424-1.2.1.1-z2vzxMANIcIml.oFcua6ivqBmkN07xkoCH9tlqKR0ltl4iVB9L6VhqGd7KJdp85GjcAdeAJtOUeAqCSKfvg1JkwDPkbWDnbHUOkAmUsgxkt7ceYpdYDrNJaw2aJ4zAm1bx.g9O_RX37cWR2MW6WfvoMTavX5rtEm1ckPQ2JfcnhXtmFOVeapd_d_IGrvBIaM8aY11gOb8wR6x7JR4uONCDIv0QV0A3gW3ug72rPG7KY
+    bearer-token: ${MANGADREAM_RAPHAEL_BEARER_TOKEN:}
   google:
     client-id: 1047046505874-3qj543ddivppa34lag0a6k0u9od7stnk.apps.googleusercontent.com
   proxy:
