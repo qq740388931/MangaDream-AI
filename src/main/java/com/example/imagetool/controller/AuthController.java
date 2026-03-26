@@ -39,7 +39,7 @@ public class AuthController {
 
     private static final String GOOGLE_TOKENINFO_URL = "https://oauth2.googleapis.com/tokeninfo?id_token=";
 
-    private static final Logger log = LoggerFactory.getLogger(AuthController.class);
+    private static final  Logger log = LoggerFactory.getLogger(AuthController.class);
 
     private final OkHttpClient client;
     private final ObjectMapper mapper = new ObjectMapper();
