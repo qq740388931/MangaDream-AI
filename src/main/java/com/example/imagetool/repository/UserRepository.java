@@ -32,9 +32,9 @@ public class UserRepository {
             u.setLastLoginAt(rs.getString("last_login_at"));
             int pts = rs.getInt("points");
             u.setPoints(rs.wasNull() ? null : pts);
-             int vip = rs.getInt("is_vip");
-             u.setIsVip(rs.wasNull() ? null : vip);
-             u.setVipExpireAt(rs.getString("vip_expire_at"));
+            int vip = rs.getInt("is_vip");
+            u.setIsVip(rs.wasNull() ? null : vip);
+            u.setVipExpireAt(rs.getString("vip_expire_at"));
             return u;
         }
     };
@@ -59,8 +59,8 @@ public class UserRepository {
         String now = LocalDateTime.now().format(FORMATTER);
         String sql = "INSERT INTO users (google_sub, email, name, avatar_url, created_at, last_login_at, points, is_vip, vip_expire_at) VALUES (?,?,?,?,?,?,?,?,?)";
         jdbcTemplate.update(sql, sub, email, name, avatarUrl, now, now, 10, 0, null);
-        Long id = jdbcTemplate.queryForObject("SELECT last_insert_rowid()", Long.class);
-        return findById(id);
+        // SQLite 的 last_insert_rowid() 依赖同一连接；连接池场景下可能取错，改为按唯一 google_sub 回查更稳。
+        return findByGoogleSub(sub);
     }
 
     public void updateLoginInfo(Long id, String email, String name, String avatarUrl) {

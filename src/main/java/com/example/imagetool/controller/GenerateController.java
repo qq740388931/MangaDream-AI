@@ -2,6 +2,7 @@ package com.example.imagetool.controller;
 
 import com.example.imagetool.common.ErrorMessageUtil;
 import com.example.imagetool.common.Result;
+import com.example.imagetool.entity.User;
 import com.example.imagetool.repository.UserRepository;
 import com.example.imagetool.repository.GenerateLogRepository;
 import com.example.imagetool.service.StyleService;
@@ -39,11 +40,7 @@ public class GenerateController {
     private static final Logger log = LoggerFactory.getLogger(GenerateController.class);
     private static final int DEFAULT_WIDTH = 683;
     private static final int DEFAULT_HEIGHT = 1024;
-    private static final String RANDOM_DEFAULT_PROMPT = "帮我生成图片：[角色描述]，保持人物原型完全不变，全身/半身构图，如果人物原型缺少了脚和腿可以补充。\n" +
-            "[姿势动态描述]。背景设定为[原作动漫名称]的真实三次元世界观场景，包含标志性建筑/自然景观/元素/道具但是人物原型完全不变。画面构图包含前景[模糊元素]和中景,\n" +
-            "人物保持照片原光影，但通过环境光反射让人物自然融入动漫背景，形成真实的立体感和纵深层次，高质量，照片级人物 + 背景融合。\n" +
-            "人物身边要有[原作动漫名称]的道具，比如某种兽和机车以及武器等.\n" +
-            "再来点烟雾什么的增加氛围感";
+    private static final String RANDOM_DEFAULT_PROMPT = "保持人物原型完全不变（脸部、服装、身材比例锁定，不做任何修改）。构图：全身或半身构图，若原图人物缺脚可自动补全，严格遵循原图的姿势动态。背景：采用该角色所属原作的真实三次元世界观场景，包含标志性建筑、自然景观、或经典元素/道具。背景需有明确的空间层次（前景模糊元素 + 中景主体 + 远景环境），通过环境光反射与漫反射让人物自然融入背景，营造照片级的真实感与纵深。道具与氛围：在人物身边添加符合原作的标志性道具，增加动态烟雾/雾气/薄雾（自然飘散，不遮挡人物面部），提升氛围感。特效：适当增加光影特效（如光晕、镜头光斑、粒子、魔法辉光等），提升画面神秘感与沉浸感。整体要求：最终输出为照片级真实感，人物与背景融合自然，光影统一，不做卡通化处理";
 
     private static final MediaType MEDIA_TYPE_JSON = MediaType.parse("application/json; charset=utf-8");
 
@@ -52,6 +49,12 @@ public class GenerateController {
 
     @Value("${app.raphael.bearer-token:}")
     private String bearerToken;
+    @Value("${app.auth.dev-enabled:false}")
+    private boolean devEnabled;
+    @Value("${app.auth.dev-email:}")
+    private String devEmail;
+    @Value("${app.auth.dev-name:}")
+    private String devName;
 
     private final StyleService styleService;
     private final UserRepository userRepository;
@@ -362,10 +365,38 @@ public class GenerateController {
             return null;
         }
         String token = request.getHeader("X-Session-Token");
-        if (token == null || token.isEmpty()) {
+        if (token != null && !token.trim().isEmpty()) {
+            Long userId = userRepository.findUserIdByToken(token.trim());
+            if (userId != null) {
+                return userId;
+            }
+        }
+        return resolveDevUserIdFallback(request);
+    }
+
+    private Long resolveDevUserIdFallback(HttpServletRequest request) {
+        String remoteIp = request != null ? request.getRemoteAddr() : "";
+        boolean localRequest = "127.0.0.1".equals(remoteIp)
+                || "::1".equals(remoteIp)
+                || "0:0:0:0:0:0:0:1".equals(remoteIp);
+        if (!devEnabled && !localRequest) {
             return null;
         }
-        return userRepository.findUserIdByToken(token);
+        String effectiveDevEmail = (devEmail == null || devEmail.trim().isEmpty()) ? "local-dev@mangadream.ai" : devEmail.trim();
+        String effectiveDevName = (devName == null || devName.trim().isEmpty()) ? effectiveDevEmail : devName.trim();
+        String sub = "dev-" + effectiveDevEmail;
+        try {
+            User user = userRepository.findByGoogleSub(sub);
+            if (user == null) {
+                user = userRepository.insert(sub, effectiveDevEmail, effectiveDevName, null);
+            } else {
+                userRepository.updateLoginInfo(user.getId(), effectiveDevEmail, effectiveDevName, null);
+            }
+            return (user != null) ? user.getId() : null;
+        } catch (Exception e) {
+            log.warn("resolveDevUserIdFallback failed, ip={}, sub={}", remoteIp, sub, e);
+            return null;
+        }
     }
 
     private void logGenerateFull(Long userId,

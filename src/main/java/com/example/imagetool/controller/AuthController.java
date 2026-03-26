@@ -40,7 +40,7 @@ public class AuthController {
 
     private static final String GOOGLE_TOKENINFO_URL = "https://oauth2.googleapis.com/tokeninfo?id_token=";
 
-    private static final  Logger log = LoggerFactory.getLogger(AuthController.class);
+    private static final Logger log = LoggerFactory.getLogger(AuthController.class);
 
     private final OkHttpClient client;
     private final ObjectMapper mapper = new ObjectMapper();
@@ -155,6 +155,10 @@ public class AuthController {
             } else {
                 userRepository.updateLoginInfo(user.getId(), email, name, picture);
             }
+            if (user == null || user.getId() == null) {
+                log.error("Google 登录失败: 用户创建/查询后为空, sub={}", sub);
+                return Result.error(500, "Failed to create or load user");
+            }
 
             String sessionToken = userRepository.createSessionToken(user.getId());
 
@@ -209,6 +213,10 @@ public class AuthController {
                 newUser = true;
             } else {
                 userRepository.updateLoginInfo(user.getId(), effectiveDevEmail, name, picture);
+            }
+            if (user == null || user.getId() == null) {
+                log.error("dev-login 失败: 用户创建/查询后为空, sub={}", sub);
+                return Result.error(500, "Failed to create or load dev user");
             }
 
             String sessionToken = userRepository.createSessionToken(user.getId());
