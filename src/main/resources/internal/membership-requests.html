@@ -63,7 +63,7 @@
     <h1>会员充值申请</h1>
     <p class="hint">
       用户在前台 <code>vip.html</code> 提交邮箱后写入 <code>membership_request</code>。<strong>待处理</strong>表示尚未在后台确认充值；
-      确认已收款后点击<strong>确认充值 50 积分</strong>，系统会把该用户积分 +50 并标记<strong>已充</strong>。
+      确认已收款后点击<strong>确认充值 100 积分</strong>，系统会把该用户积分 +100 并标记<strong>已充</strong>。
       若提交时未登录（无 user_id），无法自动充值，请自行在「数据表」里给用户加积分。
     </p>
 
@@ -164,11 +164,11 @@
       var btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'btn-credit';
-      btn.textContent = st === 'pending' ? (r.userId != null ? '确认充值 50 积分' : '无用户 ID') : '—';
+      btn.textContent = st === 'pending' ? (r.userId != null ? '确认充值 100 积分' : '无用户 ID') : '—';
       btn.disabled = !canCredit;
       if (canCredit) {
         btn.addEventListener('click', function () {
-          if (!window.confirm('确认已收到款项？将为用户 ID ' + r.userId + ' 充值 50 积分。')) return;
+          if (!window.confirm('确认已收到款项？将为用户 ID ' + r.userId + ' 充值 100 积分。')) return;
           document.getElementById('msg').textContent = '处理中…';
           document.getElementById('msg').className = 'hint';
           fetchJson(apiBase + '/membership-requests/' + r.id + '/credit', { method: 'POST' })

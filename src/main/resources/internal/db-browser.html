@@ -15,24 +15,16 @@
     .panel { background: #242424; border: 1px solid #333; border-radius: 8px; padding: 12px; }
     .tables { list-style: none; margin: 0; padding: 0; max-height: 70vh; overflow: auto; }
     .tables li { margin: 0; }
-    .tables .table-row { display: flex; gap: 6px; align-items: stretch; margin-bottom: 4px; }
     .tables .table-name-btn {
-      flex: 1; min-width: 0; text-align: left; padding: 8px 10px;
+      width: 100%; text-align: left; padding: 8px 10px; margin-bottom: 4px;
       background: #333; border: 1px solid #444; color: #e0e0e0; border-radius: 6px; cursor: pointer; font-size: 13px;
     }
     .tables .table-name-btn:hover { background: #3a3a3a; }
     .tables .table-name-btn.active { border-color: #4f46e5; background: #2e2a66; color: #fff; }
-    .tables .btn-table-clear {
-      flex-shrink: 0; padding: 6px 8px; font-size: 11px; border-radius: 6px;
-      border: 1px solid #b91c1c; background: #5c1a1a; color: #e8e8e8; cursor: pointer; white-space: nowrap;
-    }
-    .tables .btn-table-clear:hover { background: #7f1d1d; }
     .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 10px; font-size: 13px; }
     .toolbar button {
       padding: 6px 12px; border-radius: 6px; border: 1px solid #444; background: #333; color: #e0e0e0; cursor: pointer;
     }
-    .toolbar button.btn-danger { border-color: #b91c1c; background: #5c1a1a; color: #fecaca; }
-    .toolbar button.btn-danger:hover { background: #7f1d1d; }
     .toolbar button:disabled { opacity: 0.5; cursor: not-allowed; }
     .toolbar input { width: 56px; padding: 4px 6px; background: #1a1a1a; border: 1px solid #444; color: #fff; border-radius: 4px; }
     .err { color: #f87171; font-size: 13px; }
@@ -122,7 +114,6 @@
         <div class="toolbar" id="toolbar" style="display:none;">
           <span id="pagerInfo"></span>
           <button type="button" id="btnAddRow">新增一行</button>
-          <button type="button" id="btnClearTable" class="btn-danger">清空本表数据</button>
           <button type="button" id="btnPrev">上一页</button>
           <button type="button" id="btnNext">下一页</button>
           <label>每页 <input type="number" id="pageSize" min="1" max="200" value="50" /> 行</label>
@@ -183,31 +174,6 @@
   var page = 0;
   var size = 50;
   var lastPayload = null;
-
-  function clearTableData(tableName) {
-    if (!tableName) return;
-    if (!window.confirm('确定清空表「' + tableName + '」的全部数据？不可恢复！')) return;
-    document.getElementById('msg').textContent = '清空中…';
-    document.getElementById('msg').className = 'meta';
-    fetchJson(apiBase + '/clear-table', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ table: tableName })
-    })
-      .then(function (d) {
-        document.getElementById('msg').textContent = '已清空 ' + (d.deleted != null ? d.deleted : 0) + ' 行';
-        document.getElementById('msg').className = 'ok';
-        loadTables();
-        if (currentTable === tableName) {
-          page = 0;
-          loadTable();
-        }
-      })
-      .catch(function (e) {
-        document.getElementById('msg').textContent = '清空失败: ' + e.message;
-        document.getElementById('msg').className = 'err';
-      });
-  }
 
   function openInsertModal() {
     if (!currentTable || !lastPayload) {
@@ -275,8 +241,6 @@
         ul.innerHTML = '';
         names.forEach(function (name) {
           var li = document.createElement('li');
-          var row = document.createElement('div');
-          row.className = 'table-row';
           var btn = document.createElement('button');
           btn.type = 'button';
           btn.className = 'table-name-btn';
@@ -289,19 +253,7 @@
             page = 0;
             loadTable();
           });
-          var btnClr = document.createElement('button');
-          btnClr.type = 'button';
-          btnClr.className = 'btn-table-clear';
-          btnClr.setAttribute('aria-label', '清空表 ' + name);
-          btnClr.textContent = '清空';
-          btnClr.addEventListener('click', function (e) {
-            e.preventDefault();
-            e.stopPropagation();
-            clearTableData(name);
-          });
-          row.appendChild(btn);
-          row.appendChild(btnClr);
-          li.appendChild(row);
+          li.appendChild(btn);
           ul.appendChild(li);
         });
         if (currentTable) {
@@ -513,9 +465,6 @@
   document.getElementById('pageSize').addEventListener('change', function () { page = 0; loadTable(); });
 
   document.getElementById('btnAddRow').addEventListener('click', function () { openInsertModal(); });
-  document.getElementById('btnClearTable').addEventListener('click', function () {
-    if (currentTable) clearTableData(currentTable);
-  });
   document.getElementById('insertModalCancel').addEventListener('click', function () { closeInsertModal(); });
   document.getElementById('insertModalOk').addEventListener('click', function () { submitInsert(); });
   document.getElementById('insertModal').addEventListener('click', function (e) {

@@ -186,8 +186,8 @@ public class SqliteInitRunner implements ApplicationRunner {
     }
 
     private void seedDataIfEmpty() {
-        // 确保已有用户至少有 4 积分
-        jdbcTemplate.update("UPDATE users SET points = 4 WHERE points IS NULL OR points < 4");
+        // 确保已有用户至少有 10 积分（与每日免费额度一致）
+        jdbcTemplate.update("UPDATE users SET points = 10 WHERE points IS NULL OR points < 10");
 
         Integer count = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM inspiration_template", Integer.class);
         if (count == null || count > 0) {

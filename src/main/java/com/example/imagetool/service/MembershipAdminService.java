@@ -21,7 +21,7 @@ import java.util.Map;
 @Service
 public class MembershipAdminService {
 
-    private static final int TRIAL_POINTS = 50;
+    private static final int TRIAL_POINTS = 100;
     private static final DateTimeFormatter F = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     private final MembershipRequestRepository membershipRequestRepository;
