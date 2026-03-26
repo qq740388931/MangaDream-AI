@@ -94,7 +94,7 @@ public class GenerateController {
             logGenerateFull(null, "style", request, false, "not_logged_in", null, reqJ, respJ);
             return Result.error(401, "Please sign in (send X-Session-Token header)");
         }
-        if (!userRepository.deductPoints(userId, 4)) {
+        if (!userRepository.deductPoints(userId, 5)) {
             log.warn("generate(style): 积分不足, userId={}", userId);
             String reqJ = buildStyleRequestSnapshot(body, templateId, width, height, imageBase64, null);
             String respJ = snapResponse(402, "Insufficient points. Please upgrade to membership or try again after tomorrow's free points are granted.", null);
@@ -163,7 +163,7 @@ public class GenerateController {
             logGenerateFull(null, "random", request, false, "not_logged_in", null, reqJ, respJ);
             return Result.error(401, "Please sign in (send X-Session-Token header)");
         }
-        if (!userRepository.deductPoints(userId, 4)) {
+        if (!userRepository.deductPoints(userId, 5)) {
             log.warn("generate(random): 积分不足, userId={}", userId);
             String reqJ = buildRandomRequestSnapshot(body, width, height, imageBase64);
             String respJ = snapResponse(402, "Insufficient points. Please upgrade to membership or try again after tomorrow's free points are granted.", null);

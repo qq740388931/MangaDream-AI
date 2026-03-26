@@ -302,8 +302,11 @@
     return fetch('/api/auth/config')
       .then(function (r) { return r.json(); })
       .then(function (res) {
-        if (res && res.code === 200 && res.data && res.data.googleClientId) {
-          window.__MANGADREAM_GOOGLE_CLIENT_ID__ = res.data.googleClientId;
+        if (res && res.code === 200 && res.data) {
+          if (res.data.googleClientId) {
+            window.__MANGADREAM_GOOGLE_CLIENT_ID__ = res.data.googleClientId;
+          }
+          window.__MANGADREAM_DEV_LOGIN_ENABLED__ = !!res.data.devLoginEnabled;
         }
       })
       .catch(function (err) {
@@ -338,7 +341,8 @@
       return;
     }
     var host = window.location.hostname;
-    if (host !== 'localhost' && host !== '127.0.0.1') {
+    var isLocalHost = host === 'localhost' || host === '127.0.0.1' || host === '::1';
+    if (!window.__MANGADREAM_DEV_LOGIN_ENABLED__ && !isLocalHost) {
       return;
     }
     fetch('/api/auth/dev-login', {

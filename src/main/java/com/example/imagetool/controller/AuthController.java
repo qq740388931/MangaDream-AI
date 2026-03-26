@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Proxy;
 import java.time.LocalDate;
@@ -78,9 +79,10 @@ public class AuthController {
      * 前端读取 Google 客户端 ID，与后端 app.google.client-id 保持一致（避免两处手写不一致）。
      */
     @GetMapping("/config")
-    public Result<Map<String, String>> publicAuthConfig() {
-        Map<String, String> data = new HashMap<>();
+    public Result<Map<String, Object>> publicAuthConfig() {
+        Map<String, Object> data = new HashMap<>();
         data.put("googleClientId", googleClientId != null ? googleClientId : "");
+        data.put("devLoginEnabled", devEnabled);
         return Result.success(data);
     }
 
@@ -185,26 +187,28 @@ public class AuthController {
      */
     @PostMapping("/dev-login")
     public Result<Map<String, Object>> devLogin(HttpServletRequest request) {
-        if (!devEnabled) {
+        boolean localRequest = isLocalRequest(request);
+        if (!devEnabled && !localRequest) {
             log.warn("dev-login 被拒绝: app.auth.dev-enabled=false");
             return Result.error(403, "dev-login is disabled (app.auth.dev-enabled=false)");
         }
-        if (devEmail == null || devEmail.isEmpty()) {
+        String effectiveDevEmail = (devEmail == null || devEmail.isEmpty()) ? "local-dev@mangadream.ai" : devEmail;
+        if (effectiveDevEmail.isEmpty()) {
             log.error("dev-login 失败: 未配置 app.auth.dev-email");
             return Result.error(500, "app.auth.dev-email is not configured");
         }
         try {
-            String sub = "dev-" + devEmail;
-            String name = (devName == null || devName.isEmpty()) ? devEmail : devName;
+            String sub = "dev-" + effectiveDevEmail;
+            String name = (devName == null || devName.isEmpty()) ? effectiveDevEmail : devName;
             String picture = null;
 
             User user = userRepository.findByGoogleSub(sub);
             boolean newUser = false;
             if (user == null) {
-                user = userRepository.insert(sub, devEmail, name, picture);
+                user = userRepository.insert(sub, effectiveDevEmail, name, picture);
                 newUser = true;
             } else {
-                userRepository.updateLoginInfo(user.getId(), devEmail, name, picture);
+                userRepository.updateLoginInfo(user.getId(), effectiveDevEmail, name, picture);
             }
 
             String sessionToken = userRepository.createSessionToken(user.getId());
@@ -228,6 +232,22 @@ public class AuthController {
         } catch (Exception e) {
             log.error("dev 登录异常", e);
             return Result.error(500, ErrorMessageUtil.fromThrowable(e));
+        }
+    }
+
+    private static boolean isLocalRequest(HttpServletRequest request) {
+        if (request == null) {
+            return false;
+        }
+        String ip = request.getRemoteAddr();
+        if (ip == null || ip.isEmpty()) {
+            return false;
+        }
+        try {
+            InetAddress addr = InetAddress.getByName(ip);
+            return addr.isLoopbackAddress() || addr.isAnyLocalAddress();
+        } catch (Exception e) {
+            return false;
         }
     }
 
