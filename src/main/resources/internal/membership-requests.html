@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>API 访问日志 — 后台</title>
+  <title>会员充值申请 — 后台</title>
   <style>
     * { box-sizing: border-box; }
     body { margin: 0; font-family: system-ui, sans-serif; background: #1a1a1a; color: #e8e8e8; min-height: 100vh; }
-    .wrap { max-width: 1600px; margin: 0 auto; padding: 16px; }
+    .wrap { max-width: 1400px; margin: 0 auto; padding: 16px; }
     h1 { font-size: 1.15rem; margin: 0 0 8px; color: #ff9933; }
-    .hint { font-size: 12px; color: #888; margin: 0 0 12px; }
+    .hint { font-size: 12px; color: #888; margin: 0 0 12px; line-height: 1.55; }
     .admin-nav { display: flex; gap: 10px; margin: 0 0 16px; flex-wrap: wrap; align-items: center; }
     .admin-nav a {
       color: #ffe9b3; text-decoration: none; padding: 8px 14px; border-radius: 8px; border: 1px solid #444;
@@ -23,14 +23,10 @@
       padding: 12px; background: #242424; border: 1px solid #333; border-radius: 8px;
     }
     .filters label { font-size: 12px; color: #aaa; display: block; margin-bottom: 4px; }
-    .filters select, .filters input[type="text"] {
-      padding: 8px 10px; border-radius: 6px; border: 1px solid #444; background: #1a1a1a; color: #fff; font-size: 13px; min-width: 200px;
-    }
-    .filters input[type="text"] { min-width: 220px; }
+    .filters select { padding: 8px 10px; border-radius: 6px; border: 1px solid #444; background: #1a1a1a; color: #fff; font-size: 13px; min-width: 180px; }
     .filters button {
       padding: 8px 16px; border-radius: 6px; border: 1px solid #4f46e5; background: #4f46e5; color: #fff; cursor: pointer; font-size: 13px;
     }
-    .filters button:hover { background: #4338ca; }
     .toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 10px; font-size: 13px; color: #888; }
     .toolbar button {
       padding: 6px 12px; border-radius: 6px; border: 1px solid #444; background: #333; color: #e0e0e0; cursor: pointer;
@@ -38,40 +34,51 @@
     .toolbar button:disabled { opacity: 0.5; cursor: not-allowed; }
     .toolbar input { width: 56px; padding: 4px 6px; background: #1a1a1a; border: 1px solid #444; color: #fff; border-radius: 4px; }
     .err { color: #f87171; font-size: 13px; }
+    .ok { color: #4ade80; font-size: 13px; }
     .scroll { overflow: auto; max-width: 100%; border: 1px solid #333; border-radius: 8px; }
-    table.log { border-collapse: collapse; font-size: 12px; width: 100%; min-width: 900px; }
+    table.log { border-collapse: collapse; font-size: 12px; width: 100%; min-width: 1000px; }
     table.log th, table.log td { border: 1px solid #444; padding: 6px 8px; vertical-align: top; text-align: left; }
     table.log th { background: #2a2a2a; white-space: nowrap; position: sticky; top: 0; z-index: 1; }
-    table.log td { word-break: break-all; max-width: 280px; }
-    table.log td.path { max-width: 320px; font-family: ui-monospace, monospace; font-size: 11px; }
+    table.log td { word-break: break-all; max-width: 200px; }
     table.log td.num { white-space: nowrap; }
+    .st-pending { color: #fbbf24; font-weight: 600; }
+    .st-credited { color: #4ade80; }
+    .btn-credit {
+      padding: 6px 12px; border-radius: 6px; border: 1px solid #4f46e5; background: #4f46e5; color: #fff; cursor: pointer; font-size: 12px;
+    }
+    .btn-credit:hover { background: #4338ca; }
+    .btn-credit:disabled { opacity: 0.45; cursor: not-allowed; }
   </style>
 </head>
 <body>
   <div class="wrap">
     <nav class="admin-nav">
       <a href="/internal/db-browser">数据表</a>
-      <a href="/internal/db-browser/access-logs" class="active">API 访问日志</a>
+      <a href="/internal/db-browser/access-logs">API 访问日志</a>
       <a href="/internal/db-browser/login-audit-logs">登录语义日志</a>
-      <a href="/internal/db-browser/membership-requests">会员充值<span id="navMembershipBadge" class="nav-badge"></span></a>
+      <a href="/internal/db-browser/membership-requests" class="active">会员充值<span id="navMembershipBadge" class="nav-badge"></span></a>
       <a href="/internal/db-browser/generate-logs">生成日志</a>
       <button type="button" id="btnLogout" style="margin-left:auto;padding:8px 14px;border-radius:8px;border:1px solid #555;background:#333;color:#ccc;cursor:pointer;font-size:13px;">退出登录</button>
     </nav>
-    <h1>api_access_log</h1>
-    <p class="hint">仅记录 <code>/api/**</code> 请求；类型按路径归类，可叠加关键词在路径、邮箱、IP 中搜索。</p>
+    <h1>会员充值申请</h1>
+    <p class="hint">
+      用户在前台 <code>vip.html</code> 提交邮箱后写入 <code>membership_request</code>。<strong>待处理</strong>表示尚未在后台确认充值；
+      确认已收款后点击<strong>确认充值 50 积分</strong>，系统会把该用户积分 +50 并标记<strong>已充</strong>。
+      若提交时未登录（无 user_id），无法自动充值，请自行在「数据表」里给用户加积分。
+    </p>
 
     <div class="filters">
       <div>
-        <label for="selType">类型</label>
-        <select id="selType"></select>
-      </div>
-      <div>
-        <label for="inpQ">关键词</label>
-        <input type="text" id="inpQ" placeholder="路径 / 邮箱 / IP 模糊搜" />
+        <label for="selStatus">状态</label>
+        <select id="selStatus">
+          <option value="ALL">全部</option>
+          <option value="pending" selected>待处理</option>
+          <option value="credited">已充</option>
+        </select>
       </div>
       <div>
         <label>&nbsp;</label>
-        <button type="button" id="btnSearch">搜索</button>
+        <button type="button" id="btnSearch">筛选</button>
       </div>
     </div>
 
@@ -89,21 +96,23 @@
         <thead>
           <tr>
             <th>ID</th>
-            <th>时间</th>
-            <th>用户</th>
-            <th>路径</th>
-            <th>方法</th>
-            <th>查询串</th>
             <th>状态</th>
-            <th>耗时(ms)</th>
-            <th>IP</th>
-            <th>UA（截断）</th>
+            <th>用户 ID</th>
+            <th>用户名</th>
+            <th>邮箱</th>
+            <th>方案</th>
+            <th>当前积分</th>
+            <th>提交时间</th>
+            <th>充值时间</th>
+            <th>备注</th>
+            <th>操作</th>
           </tr>
         </thead>
         <tbody id="tbody"></tbody>
       </table>
     </div>
   </div>
+  <script src="/internal/admin-pending-badge.js"></script>
   <script>
 (function () {
   var apiBase = '/internal/db-browser/api';
@@ -124,17 +133,6 @@
     });
   }
 
-  function fillTypes(types) {
-    var sel = document.getElementById('selType');
-    sel.innerHTML = '';
-    (types || []).forEach(function (t) {
-      var opt = document.createElement('option');
-      opt.value = t.id;
-      opt.textContent = t.label;
-      sel.appendChild(opt);
-    });
-  }
-
   function render(rows) {
     var tb = document.getElementById('tbody');
     tb.innerHTML = '';
@@ -147,34 +145,62 @@
         tr.appendChild(d);
       }
       td('num', r.id);
-      td('', r.createdAt);
-      td('', r.userEmail || (r.userId != null ? 'uid:' + r.userId : ''));
-      td('path', r.path);
-      td('num', r.method);
-      td('', r.queryString || '');
-      td('num', r.httpStatus);
-      td('num', r.durationMs);
-      td('', r.ip || '');
-      td('', r.userAgent || '');
+      var st = (r.status || '').toLowerCase();
+      var stTd = document.createElement('td');
+      stTd.className = st === 'pending' ? 'st-pending' : 'st-credited';
+      stTd.textContent = st === 'pending' ? '待处理' : (st === 'credited' ? '已充' : (r.status || ''));
+      tr.appendChild(stTd);
+      td('num', r.userId != null ? r.userId : '—');
+      td('', r.username || '');
+      td('', r.email || '');
+      td('', r.planCode || '');
+      td('num', r.userPoints != null ? r.userPoints : '—');
+      td('', r.createdAt || '');
+      td('', r.creditedAt || '—');
+      td('', r.adminComment || '');
+
+      var tdAct = document.createElement('td');
+      var canCredit = st === 'pending' && r.userId != null;
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'btn-credit';
+      btn.textContent = st === 'pending' ? (r.userId != null ? '确认充值 50 积分' : '无用户 ID') : '—';
+      btn.disabled = !canCredit;
+      if (canCredit) {
+        btn.addEventListener('click', function () {
+          if (!window.confirm('确认已收到款项？将为用户 ID ' + r.userId + ' 充值 50 积分。')) return;
+          document.getElementById('msg').textContent = '处理中…';
+          document.getElementById('msg').className = 'hint';
+          fetchJson(apiBase + '/membership-requests/' + r.id + '/credit', { method: 'POST' })
+            .then(function (res) {
+              document.getElementById('msg').textContent = '已充值，当前积分：' + (res.userPointsAfter != null ? res.userPointsAfter : '');
+              document.getElementById('msg').className = 'ok';
+              load();
+            })
+            .catch(function (e) {
+              document.getElementById('msg').textContent = '失败: ' + e.message;
+              document.getElementById('msg').className = 'err';
+            });
+        });
+      }
+      tdAct.appendChild(btn);
+      tr.appendChild(tdAct);
+
       tb.appendChild(tr);
     });
   }
 
   function load() {
-    var type = document.getElementById('selType').value || 'ALL';
-    var q = document.getElementById('inpQ').value.trim();
+    var status = document.getElementById('selStatus').value || 'ALL';
     var ps = parseInt(document.getElementById('pageSize').value, 10) || 50;
     size = Math.min(200, Math.max(1, ps));
     document.getElementById('pageSize').value = String(size);
 
-    var qs = 'page=' + page + '&size=' + size + '&type=' + encodeURIComponent(type);
-    if (q) qs += '&q=' + encodeURIComponent(q);
+    var qs = 'page=' + page + '&size=' + size + '&status=' + encodeURIComponent(status);
     document.getElementById('msg').textContent = '加载中…';
 
-    fetchJson(apiBase + '/access-logs?' + qs)
+    fetchJson(apiBase + '/membership-requests?' + qs)
       .then(function (data) {
-        fillTypes(data.types);
-        document.getElementById('selType').value = type || 'ALL';
         lastTotal = data.total;
         var totalPages = Math.max(1, Math.ceil(data.total / data.size));
         document.getElementById('pagerInfo').textContent = '共 ' + data.total + ' 条 · 第 ' + (data.page + 1) + ' / ' + totalPages + ' 页';
@@ -206,6 +232,5 @@
   load();
 })();
   </script>
-  <script src="/internal/admin-pending-badge.js"></script>
 </body>
 </html>

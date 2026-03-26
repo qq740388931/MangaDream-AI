@@ -96,9 +96,14 @@ public class SqliteInitRunner implements ApplicationRunner {
                         "created_at TEXT," +
                         "updated_at TEXT," +
                         "admin_comment TEXT," +
+                        "credited_at TEXT," +
                         "FOREIGN KEY(user_id) REFERENCES users(id)" +
                         ")"
         );
+        try {
+            jdbcTemplate.execute("ALTER TABLE membership_request ADD COLUMN credited_at TEXT");
+        } catch (Exception ignored) {
+        }
 
         jdbcTemplate.execute(
                 "CREATE TABLE IF NOT EXISTS generate_log (" +

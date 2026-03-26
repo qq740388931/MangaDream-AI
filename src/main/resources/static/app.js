@@ -120,17 +120,21 @@
         pts = 0;
       }
       var ptsDiv = document.createElement('div');
+      ptsDiv.id = 'headerUserPoints';
       ptsDiv.className = 'header-user__popover-item header-user__popover-item--muted';
       ptsDiv.textContent = 'Points: ' + pts;
       popover.appendChild(ptsDiv);
 
+      var vipDiv = document.createElement('div');
+      vipDiv.id = 'headerUserVip';
+      vipDiv.className = 'header-user__popover-item header-user__popover-item--muted';
       var vipDays = currentUser.profile.vipDaysLeft;
       if (typeof vipDays === 'number' && vipDays > 0) {
-        var vipDiv = document.createElement('div');
-        vipDiv.className = 'header-user__popover-item header-user__popover-item--muted';
         vipDiv.textContent = 'VIP: ' + vipDays + ' days left';
-        popover.appendChild(vipDiv);
+      } else {
+        vipDiv.style.display = 'none';
       }
+      popover.appendChild(vipDiv);
 
       var divider = document.createElement('div');
       divider.className = 'header-user__popover-divider';
@@ -152,8 +156,48 @@
       popover.style.display = 'none';
       userInfo.appendChild(popover);
 
-      avatar.addEventListener('click', function () {
-        popover.style.display = popover.style.display === 'none' ? 'block' : 'none';
+      avatar.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var opening = popover.style.display === 'none' || !popover.style.display;
+        if (opening) {
+          if (currentUser && currentUser.token) {
+            var ptsEl = document.getElementById('headerUserPoints');
+            var vipEl = document.getElementById('headerUserVip');
+            if (ptsEl) ptsEl.textContent = 'Points: …';
+            fetch('/api/auth/profile', {
+              headers: { 'X-Session-Token': currentUser.token },
+              credentials: 'same-origin'
+            })
+              .then(function (r) { return r.json(); })
+              .then(function (res) {
+                if (res && res.code === 200 && res.data) {
+                  var d = res.data;
+                  currentUser.profile = Object.assign({}, currentUser.profile, d);
+                  saveUserToStorage(currentUser);
+                  if (ptsEl) {
+                    ptsEl.textContent = 'Points: ' + (typeof d.points === 'number' ? d.points : 0);
+                  }
+                  if (vipEl) {
+                    if (typeof d.vipDaysLeft === 'number' && d.vipDaysLeft > 0) {
+                      vipEl.textContent = 'VIP: ' + d.vipDaysLeft + ' days left';
+                      vipEl.style.display = '';
+                    } else {
+                      vipEl.style.display = 'none';
+                    }
+                  }
+                }
+              })
+              .catch(function () {
+                if (ptsEl && currentUser.profile) {
+                  var p = currentUser.profile.points;
+                  ptsEl.textContent = 'Points: ' + (typeof p === 'number' ? p : 0);
+                }
+              });
+          }
+          popover.style.display = 'block';
+        } else {
+          popover.style.display = 'none';
+        }
       });
     } else {
       var btn = document.createElement('button');

@@ -33,7 +33,7 @@
       headers: headers,
       body: JSON.stringify({
         email: email,
-        planCode: 'usd_1_100_points'
+        planCode: 'usd_1_50_points'
       })
     })
       .then(function (r) { return r.json(); })

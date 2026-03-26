@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>API 访问日志 — 后台</title>
+  <title>登录语义日志 — 后台</title>
   <style>
     * { box-sizing: border-box; }
     body { margin: 0; font-family: system-ui, sans-serif; background: #1a1a1a; color: #e8e8e8; min-height: 100vh; }
-    .wrap { max-width: 1600px; margin: 0 auto; padding: 16px; }
+    .wrap { max-width: 1400px; margin: 0 auto; padding: 16px; }
     h1 { font-size: 1.15rem; margin: 0 0 8px; color: #ff9933; }
-    .hint { font-size: 12px; color: #888; margin: 0 0 12px; }
+    .hint { font-size: 12px; color: #888; margin: 0 0 12px; line-height: 1.5; }
     .admin-nav { display: flex; gap: 10px; margin: 0 0 16px; flex-wrap: wrap; align-items: center; }
     .admin-nav a {
       color: #ffe9b3; text-decoration: none; padding: 8px 14px; border-radius: 8px; border: 1px solid #444;
@@ -42,8 +42,8 @@
     table.log { border-collapse: collapse; font-size: 12px; width: 100%; min-width: 900px; }
     table.log th, table.log td { border: 1px solid #444; padding: 6px 8px; vertical-align: top; text-align: left; }
     table.log th { background: #2a2a2a; white-space: nowrap; position: sticky; top: 0; z-index: 1; }
-    table.log td { word-break: break-all; max-width: 280px; }
-    table.log td.path { max-width: 320px; font-family: ui-monospace, monospace; font-size: 11px; }
+    table.log td { word-break: break-all; max-width: 320px; }
+    table.log td.ev { font-family: ui-monospace, monospace; font-size: 11px; color: #a5b4fc; }
     table.log td.num { white-space: nowrap; }
   </style>
 </head>
@@ -51,14 +51,18 @@
   <div class="wrap">
     <nav class="admin-nav">
       <a href="/internal/db-browser">数据表</a>
-      <a href="/internal/db-browser/access-logs" class="active">API 访问日志</a>
-      <a href="/internal/db-browser/login-audit-logs">登录语义日志</a>
+      <a href="/internal/db-browser/access-logs">API 访问日志</a>
+      <a href="/internal/db-browser/login-audit-logs" class="active">登录语义日志</a>
       <a href="/internal/db-browser/membership-requests">会员充值<span id="navMembershipBadge" class="nav-badge"></span></a>
       <a href="/internal/db-browser/generate-logs">生成日志</a>
       <button type="button" id="btnLogout" style="margin-left:auto;padding:8px 14px;border-radius:8px;border:1px solid #555;background:#333;color:#ccc;cursor:pointer;font-size:13px;">退出登录</button>
     </nav>
-    <h1>api_access_log</h1>
-    <p class="hint">仅记录 <code>/api/**</code> 请求；类型按路径归类，可叠加关键词在路径、邮箱、IP 中搜索。</p>
+    <h1>login_audit_log</h1>
+    <p class="hint">
+      与「API 访问日志」不同：这里一条记录对应<strong>一种语义事件</strong>。<br/>
+      <strong>FIRST_URL_ENTRY</strong>：未登录用户在本标签页<strong>首次</strong>打开首页 / VIP / 反馈等已挂载 <code>entry-audit.js</code> 的页面（可反映「有多少人点进来」）。<br/>
+      <strong>GOOGLE_SIGNUP</strong> / <strong>GOOGLE_LOGIN</strong>：Google 登录成功时写入；前者为<strong>新用户首次建号</strong>，后者为老用户再次登录。部署本功能<strong>之前</strong>的历史行可能均为 GOOGLE_LOGIN，无 SIGNUP 区分。
+    </p>
 
     <div class="filters">
       <div>
@@ -67,7 +71,7 @@
       </div>
       <div>
         <label for="inpQ">关键词</label>
-        <input type="text" id="inpQ" placeholder="路径 / 邮箱 / IP 模糊搜" />
+        <input type="text" id="inpQ" placeholder="事件类型 / 邮箱 / IP / 用户 ID" />
       </div>
       <div>
         <label>&nbsp;</label>
@@ -90,12 +94,9 @@
           <tr>
             <th>ID</th>
             <th>时间</th>
-            <th>用户</th>
-            <th>路径</th>
-            <th>方法</th>
-            <th>查询串</th>
-            <th>状态</th>
-            <th>耗时(ms)</th>
+            <th>事件类型</th>
+            <th>用户 ID</th>
+            <th>邮箱</th>
             <th>IP</th>
             <th>UA（截断）</th>
           </tr>
@@ -148,12 +149,9 @@
       }
       td('num', r.id);
       td('', r.createdAt);
-      td('', r.userEmail || (r.userId != null ? 'uid:' + r.userId : ''));
-      td('path', r.path);
-      td('num', r.method);
-      td('', r.queryString || '');
-      td('num', r.httpStatus);
-      td('num', r.durationMs);
+      td('ev', r.eventType);
+      td('num', r.userId != null ? r.userId : '');
+      td('', r.userEmail || '');
       td('', r.ip || '');
       td('', r.userAgent || '');
       tb.appendChild(tr);
@@ -171,7 +169,7 @@
     if (q) qs += '&q=' + encodeURIComponent(q);
     document.getElementById('msg').textContent = '加载中…';
 
-    fetchJson(apiBase + '/access-logs?' + qs)
+    fetchJson(apiBase + '/login-audit-logs?' + qs)
       .then(function (data) {
         fillTypes(data.types);
         document.getElementById('selType').value = type || 'ALL';

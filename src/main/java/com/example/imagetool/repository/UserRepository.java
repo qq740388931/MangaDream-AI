@@ -75,6 +75,15 @@ public class UserRepository {
         return updated > 0;
     }
 
+    /** 增加积分；用户不存在时返回 0 */
+    public int addPoints(Long userId, int delta) {
+        if (userId == null || delta == 0) {
+            return 0;
+        }
+        String sql = "UPDATE users SET points = COALESCE(points, 0) + ? WHERE id = ?";
+        return jdbcTemplate.update(sql, delta, userId);
+    }
+
     public String createSessionToken(Long userId) {
         String token = UUID.randomUUID().toString().replace("-", "");
         String now = LocalDateTime.now().format(FORMATTER);

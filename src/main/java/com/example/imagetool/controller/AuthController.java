@@ -84,6 +84,34 @@ public class AuthController {
         return Result.success(data);
     }
 
+    /**
+     * 当前登录用户资料（含最新积分、VIP 剩余天），供前端每次点开头像前刷新。
+     * 请求头：{@code X-Session-Token}
+     */
+    @GetMapping("/profile")
+    public Result<Map<String, Object>> profile(HttpServletRequest request) {
+        String token = request.getHeader("X-Session-Token");
+        if (token == null || token.trim().isEmpty()) {
+            return Result.error(401, "Missing session");
+        }
+        Long userId = userRepository.findUserIdByToken(token.trim());
+        if (userId == null) {
+            return Result.error(401, "Invalid or expired session");
+        }
+        User user = userRepository.findById(userId);
+        if (user == null) {
+            return Result.error(404, "User not found");
+        }
+        Map<String, Object> profile = new HashMap<>();
+        profile.put("id", user.getId());
+        profile.put("email", user.getEmail());
+        profile.put("name", user.getName());
+        profile.put("avatarUrl", user.getAvatarUrl());
+        profile.put("points", user.getPoints());
+        profile.put("vipDaysLeft", calcVipDaysLeft(user.getVipExpireAt()));
+        return Result.success(profile);
+    }
+
     @PostMapping("/google")
     public Result<Map<String, Object>> googleLogin(@RequestBody Map<String, Object> body, HttpServletRequest request) {
         log.warn("[GOOGLE_AUTH] Controller 收到 /api/auth/google（已进入业务方法）");
@@ -118,8 +146,10 @@ public class AuthController {
             }
 
             User user = userRepository.findByGoogleSub(sub);
+            boolean newUser = false;
             if (user == null) {
                 user = userRepository.insert(sub, email, name, picture);
+                newUser = true;
             } else {
                 userRepository.updateLoginInfo(user.getId(), email, name, picture);
             }
@@ -136,9 +166,9 @@ public class AuthController {
             profile.put("vipDaysLeft", calcVipDaysLeft(user.getVipExpireAt()));
             data.put("token", sessionToken);
             data.put("profile", profile);
-            log.info("[GOOGLE_AUTH] 登录成功 userId={}, email={}", user.getId(), user.getEmail());
+            log.info("[GOOGLE_AUTH] 登录成功 userId={}, email={}, newUser={}", user.getId(), user.getEmail(), newUser);
             try {
-                loginAuditLogRepository.insert("GOOGLE_LOGIN", user.getId(), user.getEmail(), clientIp(request), userAgent(request));
+                loginAuditLogRepository.insert(newUser ? "GOOGLE_SIGNUP" : "GOOGLE_LOGIN", user.getId(), user.getEmail(), clientIp(request), userAgent(request));
             } catch (Exception auditEx) {
                 log.warn("login_audit_log 写入失败", auditEx);
             }
@@ -169,8 +199,10 @@ public class AuthController {
             String picture = null;
 
             User user = userRepository.findByGoogleSub(sub);
+            boolean newUser = false;
             if (user == null) {
                 user = userRepository.insert(sub, devEmail, name, picture);
+                newUser = true;
             } else {
                 userRepository.updateLoginInfo(user.getId(), devEmail, name, picture);
             }
@@ -188,7 +220,7 @@ public class AuthController {
             data.put("token", sessionToken);
             data.put("profile", profile);
             try {
-                loginAuditLogRepository.insert("DEV_LOGIN", user.getId(), user.getEmail(), clientIp(request), userAgent(request));
+                loginAuditLogRepository.insert(newUser ? "DEV_SIGNUP" : "DEV_LOGIN", user.getId(), user.getEmail(), clientIp(request), userAgent(request));
             } catch (Exception auditEx) {
                 log.warn("login_audit_log 写入失败", auditEx);
             }

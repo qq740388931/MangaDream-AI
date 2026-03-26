@@ -17,6 +17,7 @@
     }
     .admin-nav a:hover { background: #3a3a3a; }
     .admin-nav a.active { border-color: #4f46e5; background: #2e2a66; color: #fff; }
+    .nav-badge { color: #fbbf24; font-weight: 600; }
     .filters {
       display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; margin-bottom: 14px;
       padding: 12px; background: #242424; border: 1px solid #333; border-radius: 8px;
@@ -51,6 +52,8 @@
     <nav class="admin-nav">
       <a href="/internal/db-browser">数据表</a>
       <a href="/internal/db-browser/access-logs">API 访问日志</a>
+      <a href="/internal/db-browser/login-audit-logs">登录语义日志</a>
+      <a href="/internal/db-browser/membership-requests">会员充值<span id="navMembershipBadge" class="nav-badge"></span></a>
       <a href="/internal/db-browser/generate-logs" class="active">生成日志</a>
       <button type="button" id="btnLogout" style="margin-left:auto;padding:8px 14px;border-radius:8px;border:1px solid #555;background:#333;color:#ccc;cursor:pointer;font-size:13px;">退出登录</button>
     </nav>
@@ -218,5 +221,6 @@
   load();
 })();
   </script>
+  <script src="/internal/admin-pending-badge.js"></script>
 </body>
 </html>

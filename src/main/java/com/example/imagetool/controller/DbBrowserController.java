@@ -1,5 +1,6 @@
 package com.example.imagetool.controller;
 
+import com.example.imagetool.service.MembershipAdminService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.HttpStatus;
@@ -48,6 +49,7 @@ public class DbBrowserController {
     private static final String SESSION_FLAG = "MANGADREAM_DB_BROWSER_AUTH";
 
     private final JdbcTemplate jdbcTemplate;
+    private final MembershipAdminService membershipAdminService;
 
     /** 非空时优先：与输入做常量时间比较（适合环境变量注入） */
     @Value("${mangadream.db-browser.password:}")
@@ -57,8 +59,9 @@ public class DbBrowserController {
     @Value("${mangadream.db-browser.passwordSha256:b67aa86914f3ac65cd8fddbfb60e89462d8a48046e2f9df9679986bd717555dd}")
     private String configuredPasswordSha256Hex;
 
-    public DbBrowserController(JdbcTemplate jdbcTemplate) {
+    public DbBrowserController(JdbcTemplate jdbcTemplate, MembershipAdminService membershipAdminService) {
         this.jdbcTemplate = jdbcTemplate;
+        this.membershipAdminService = membershipAdminService;
     }
 
     @GetMapping(produces = "text/html;charset=UTF-8")
@@ -80,6 +83,16 @@ public class DbBrowserController {
         return readHtml("internal/access-log.html");
     }
 
+    /** 后台：登录语义日志 login_audit_log（首访、会话恢复、Google/开发 注册与登录） */
+    @GetMapping(value = "/login-audit-logs", produces = "text/html;charset=UTF-8")
+    public ResponseEntity<String> loginAuditLogsPage(HttpSession session) {
+        checkFeatureEnabled();
+        if (!isAuthenticated(session)) {
+            return readHtml("internal/db-browser-login.html");
+        }
+        return readHtml("internal/login-audit.html");
+    }
+
     /** 后台：生成记录 generate_log（关联 users 显示用户名） */
     @GetMapping(value = "/generate-logs", produces = "text/html;charset=UTF-8")
     public ResponseEntity<String> generateLogsPage(HttpSession session) {
@@ -88,6 +101,44 @@ public class DbBrowserController {
             return readHtml("internal/db-browser-login.html");
         }
         return readHtml("internal/generate-log.html");
+    }
+
+    /** 后台：会员充值申请（PayPal 邮件提交）— 待处理 / 已充值 */
+    @GetMapping(value = "/membership-requests", produces = "text/html;charset=UTF-8")
+    public ResponseEntity<String> membershipRequestsPage(HttpSession session) {
+        checkFeatureEnabled();
+        if (!isAuthenticated(session)) {
+            return readHtml("internal/db-browser-login.html");
+        }
+        return readHtml("internal/membership-requests.html");
+    }
+
+    /** 待处理条数（导航角标） */
+    @GetMapping("/api/membership-requests/pending-count")
+    public Map<String, Object> membershipPendingCount(HttpSession session) {
+        checkFeatureEnabled();
+        requireAuth(session);
+        return membershipAdminService.pendingCountMap();
+    }
+
+    /** 分页查询 membership_request */
+    @GetMapping("/api/membership-requests")
+    public Map<String, Object> listMembershipRequests(
+            HttpSession session,
+            @RequestParam(value = "page", defaultValue = "0") int page,
+            @RequestParam(value = "size", defaultValue = "50") int size,
+            @RequestParam(value = "status", defaultValue = "ALL") String status) {
+        checkFeatureEnabled();
+        requireAuth(session);
+        return membershipAdminService.listMembershipRequests(page, size, status);
+    }
+
+    /** 确认已收款：为用户充值 50 积分并标记已充 */
+    @PostMapping("/api/membership-requests/{id}/credit")
+    public Map<String, Object> creditMembershipRequest(HttpSession session, @PathVariable("id") long id) {
+        checkFeatureEnabled();
+        requireAuth(session);
+        return membershipAdminService.creditTrial(id);
     }
 
     /**
@@ -262,9 +313,71 @@ public class DbBrowserController {
         return out;
     }
 
+    /**
+     * 分页查询 login_audit_log（语义事件，非每条 HTTP）。
+     * type：ALL、FIRST_URL_ENTRY、TOKEN_RESUME、GOOGLE_SIGNUP、GOOGLE_LOGIN、DEV_SIGNUP、DEV_LOGIN。
+     * q：在 event_type、user_email、ip、user_id 上模糊匹配。
+     */
+    @GetMapping("/api/login-audit-logs")
+    public Map<String, Object> listLoginAuditLogs(
+            HttpSession session,
+            @RequestParam(value = "page", defaultValue = "0") int page,
+            @RequestParam(value = "size", defaultValue = "50") int size,
+            @RequestParam(value = "type", defaultValue = "ALL") String type,
+            @RequestParam(value = "q", required = false) String q) {
+        checkFeatureEnabled();
+        requireAuth(session);
+        if (page < 0) {
+            page = 0;
+        }
+        size = Math.min(Math.max(size, 1), 200);
+
+        StringBuilder where = new StringBuilder();
+        List<Object> args = new ArrayList<Object>();
+        appendLoginAuditTypeFilter(where, args, type);
+        appendLoginAuditKeywordFilter(where, args, q);
+
+        Long total = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM login_audit_log WHERE 1=1" + where, Long.class, args.toArray());
+        if (total == null) {
+            total = 0L;
+        }
+
+        int offset = page * size;
+        List<Object> pageArgs = new ArrayList<Object>(args);
+        pageArgs.add(size);
+        pageArgs.add(offset);
+
+        List<Map<String, Object>> rows = jdbcTemplate.query(
+                "SELECT id, event_type, user_id, user_email, ip, user_agent, created_at FROM login_audit_log WHERE 1=1"
+                        + where
+                        + " ORDER BY id DESC LIMIT ? OFFSET ?",
+                (rs, rowNum) -> {
+                    Map<String, Object> m = new LinkedHashMap<String, Object>();
+                    m.put("id", rs.getObject("id"));
+                    m.put("eventType", rs.getString("event_type"));
+                    m.put("userId", rs.getObject("user_id"));
+                    m.put("userEmail", rs.getString("user_email"));
+                    m.put("ip", rs.getString("ip"));
+                    String ua = rs.getString("user_agent");
+                    m.put("userAgent", ua != null && ua.length() > 160 ? ua.substring(0, 160) + "…" : ua);
+                    m.put("createdAt", rs.getString("created_at"));
+                    return m;
+                },
+                pageArgs.toArray());
+
+        Map<String, Object> out = new LinkedHashMap<String, Object>();
+        out.put("total", total);
+        out.put("page", page);
+        out.put("size", size);
+        out.put("rows", rows);
+        out.put("types", LOGIN_AUDIT_TYPES);
+        return out;
+    }
+
     private static final List<Map<String, String>> ACCESS_LOG_TYPES = Arrays.asList(
             typeOpt("ALL", "全部"),
-            typeOpt("LOGIN", "登录（Google / 开发登录）"),
+            typeOpt("LOGIN", "登录与会话（Google / 开发登录 / 进入与恢复）"),
             typeOpt("AUTH_CONFIG", "拉取登录配置 /api/auth/config"),
             typeOpt("RANDOM", "随机生成 /api/generate-random"),
             typeOpt("GENERATE", "指定风格生成 /api/generate"),
@@ -290,9 +403,10 @@ public class DbBrowserController {
         String t = type.trim().toUpperCase(Locale.ROOT);
         switch (t) {
             case "LOGIN":
-                where.append(" AND (path = ? OR path = ?)");
+                where.append(" AND (path = ? OR path = ? OR path = ?)");
                 args.add("/api/auth/google");
                 args.add("/api/auth/dev-login");
+                args.add("/api/audit/entry");
                 break;
             case "AUTH_CONFIG":
                 where.append(" AND path = ?");
@@ -359,6 +473,48 @@ public class DbBrowserController {
         }
         String like = "%" + q.trim() + "%";
         where.append(" AND (path LIKE ? OR IFNULL(user_email,'') LIKE ? OR IFNULL(ip,'') LIKE ?)");
+        args.add(like);
+        args.add(like);
+        args.add(like);
+    }
+
+    private static final List<Map<String, String>> LOGIN_AUDIT_TYPES = Arrays.asList(
+            typeOpt("ALL", "全部"),
+            typeOpt("FIRST_URL_ENTRY", "匿名首次进入（未登录打开带 entry-audit 的页面）"),
+            typeOpt("TOKEN_RESUME", "已登录·会话恢复"),
+            typeOpt("GOOGLE_SIGNUP", "新用户·Google 首次注册"),
+            typeOpt("GOOGLE_LOGIN", "老用户·Google 登录"),
+            typeOpt("DEV_SIGNUP", "新用户·开发登录"),
+            typeOpt("DEV_LOGIN", "老用户·开发登录"));
+
+    private static void appendLoginAuditTypeFilter(StringBuilder where, List<Object> args, String type) {
+        if (type == null || type.trim().isEmpty() || "ALL".equalsIgnoreCase(type.trim())) {
+            return;
+        }
+        String t = type.trim();
+        String upper = t.toUpperCase(Locale.ROOT);
+        switch (upper) {
+            case "FIRST_URL_ENTRY":
+            case "TOKEN_RESUME":
+            case "GOOGLE_SIGNUP":
+            case "GOOGLE_LOGIN":
+            case "DEV_SIGNUP":
+            case "DEV_LOGIN":
+                where.append(" AND event_type = ?");
+                args.add(t);
+                break;
+            default:
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid type");
+        }
+    }
+
+    private static void appendLoginAuditKeywordFilter(StringBuilder where, List<Object> args, String q) {
+        if (q == null || q.trim().isEmpty()) {
+            return;
+        }
+        String like = "%" + q.trim() + "%";
+        where.append(" AND (IFNULL(event_type,'') LIKE ? OR IFNULL(user_email,'') LIKE ? OR IFNULL(ip,'') LIKE ? OR IFNULL(CAST(user_id AS TEXT),'') LIKE ?)");
+        args.add(like);
         args.add(like);
         args.add(like);
         args.add(like);

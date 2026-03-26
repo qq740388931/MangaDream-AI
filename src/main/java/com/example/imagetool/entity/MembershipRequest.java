@@ -11,6 +11,8 @@ public class MembershipRequest {
     private String createdAt;
     private String updatedAt;
     private String adminComment;
+    /** 后台确认充值完成时间（与 status=credited 对应） */
+    private String creditedAt;
 
     public Long getId() {
         return id;
@@ -82,6 +84,14 @@ public class MembershipRequest {
 
     public void setAdminComment(String adminComment) {
         this.adminComment = adminComment;
+    }
+
+    public String getCreditedAt() {
+        return creditedAt;
+    }
+
+    public void setCreditedAt(String creditedAt) {
+        this.creditedAt = creditedAt;
     }
 }
 
