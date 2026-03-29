@@ -43,6 +43,8 @@
     table.log th, table.log td { border: 1px solid #444; padding: 5px 6px; vertical-align: top; text-align: left; }
     table.log th { background: #2a2a2a; white-space: nowrap; position: sticky; top: 0; z-index: 1; }
     table.log td { word-break: break-all; max-width: 220px; }
+    /* resultUrl 完整展示，不因长度被截成 … */
+    table.log td.result-url { max-width: none; min-width: 320px; width: 28%; }
     table.log td.json { max-width: 280px; font-family: ui-monospace, monospace; font-size: 10px; }
     table.log td.num { white-space: nowrap; }
   </style>
@@ -55,6 +57,7 @@
       <a href="/internal/db-browser/login-audit-logs">登录语义日志</a>
       <a href="/internal/db-browser/membership-requests">会员充值<span id="navMembershipBadge" class="nav-badge"></span></a>
       <a href="/internal/db-browser/generate-logs" class="active">生成日志</a>
+      <a href="/internal/db-browser/error-logs">错误日志</a>
       <button type="button" id="btnLogout" style="margin-left:auto;padding:8px 14px;border-radius:8px;border:1px solid #555;background:#333;color:#ccc;cursor:pointer;font-size:13px;">退出登录</button>
     </nav>
     <h1>generate_log（关联 users）</h1>
@@ -166,7 +169,7 @@
       td('num', r.success === 1 || r.success === true ? '1' : '0');
       td('', short(r.reason, 120), r.reason || '');
       td('', short(r.historyId, 40), r.historyId || '');
-      td('', short(r.resultUrl, 80), r.resultUrl || '');
+      td('result-url', r.resultUrl || '');
       td('json', short(r.requestJson, 200), r.requestJson || '');
       td('json', short(r.responseJson, 200), r.responseJson || '');
       td('', r.ip || '');

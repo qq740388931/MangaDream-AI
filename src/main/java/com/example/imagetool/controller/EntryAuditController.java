@@ -1,5 +1,6 @@
 package com.example.imagetool.controller;
 
+import com.example.imagetool.common.ClientIpUtil;
 import com.example.imagetool.common.Result;
 import com.example.imagetool.entity.User;
 import com.example.imagetool.repository.LoginAuditLogRepository;
@@ -34,7 +35,7 @@ public class EntryAuditController {
             body = Collections.emptyMap();
         }
         String eventType = body.get("eventType");
-        String ip = clientIp(request);
+        String ip = ClientIpUtil.resolve(request);
         String ua = userAgent(request);
 
         if ("FIRST_URL_ENTRY".equals(eventType)) {
@@ -56,17 +57,6 @@ public class EntryAuditController {
             return Result.success(null);
         }
         return Result.error(400, "Invalid eventType");
-    }
-
-    private static String clientIp(HttpServletRequest request) {
-        String ip = request.getHeader("X-Forwarded-For");
-        if (ip != null && ip.contains(",")) {
-            ip = ip.split(",")[0].trim();
-        }
-        if (ip == null || ip.isEmpty()) {
-            ip = request.getRemoteAddr();
-        }
-        return ip;
     }
 
     private static String userAgent(HttpServletRequest request) {

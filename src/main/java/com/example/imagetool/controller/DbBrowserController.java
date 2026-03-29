@@ -113,6 +113,16 @@ public class DbBrowserController {
         return readHtml("internal/membership-requests.html");
     }
 
+    /** 后台：全局异常等写入的 app_error_log */
+    @GetMapping(value = "/error-logs", produces = "text/html;charset=UTF-8")
+    public ResponseEntity<String> errorLogsPage(HttpSession session) {
+        checkFeatureEnabled();
+        if (!isAuthenticated(session)) {
+            return readHtml("internal/db-browser-login.html");
+        }
+        return readHtml("internal/error-log.html");
+    }
+
     /** 待处理条数（导航角标） */
     @GetMapping("/api/membership-requests/pending-count")
     public Map<String, Object> membershipPendingCount(HttpSession session) {
@@ -311,6 +321,120 @@ public class DbBrowserController {
         out.put("rows", rows);
         out.put("types", ACCESS_LOG_TYPES);
         return out;
+    }
+
+    /**
+     * 分页查询 app_error_log（全局异常处理器写入）。
+     * status：ALL、400、500；q：在 path、exception_class、message、top_class、ip 上模糊匹配。
+     */
+    @GetMapping("/api/error-logs")
+    public Map<String, Object> listErrorLogs(
+            HttpSession session,
+            @RequestParam(value = "page", defaultValue = "0") int page,
+            @RequestParam(value = "size", defaultValue = "50") int size,
+            @RequestParam(value = "status", defaultValue = "ALL") String statusFilter,
+            @RequestParam(value = "q", required = false) String q) {
+        checkFeatureEnabled();
+        requireAuth(session);
+        if (page < 0) {
+            page = 0;
+        }
+        size = Math.min(Math.max(size, 1), 200);
+
+        StringBuilder where = new StringBuilder();
+        List<Object> args = new ArrayList<Object>();
+        appendErrorLogStatusFilter(where, args, statusFilter);
+        appendErrorLogKeywordFilter(where, args, q);
+
+        Long total = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM app_error_log WHERE 1=1" + where, Long.class, args.toArray());
+        if (total == null) {
+            total = 0L;
+        }
+
+        int offset = page * size;
+        List<Object> pageArgs = new ArrayList<Object>(args);
+        pageArgs.add(size);
+        pageArgs.add(offset);
+
+        List<Map<String, Object>> rows = jdbcTemplate.query(
+                "SELECT id, http_status, path, method, query_string, ip, user_agent, "
+                        + "exception_class, message, top_class, top_method, top_file, top_line, stack_trace, created_at "
+                        + "FROM app_error_log WHERE 1=1"
+                        + where
+                        + " ORDER BY id DESC LIMIT ? OFFSET ?",
+                (rs, rowNum) -> {
+                    Map<String, Object> m = new LinkedHashMap<String, Object>();
+                    m.put("id", rs.getObject("id"));
+                    m.put("httpStatus", rs.getObject("http_status"));
+                    m.put("path", rs.getString("path"));
+                    m.put("method", rs.getString("method"));
+                    m.put("queryString", rs.getString("query_string"));
+                    m.put("ip", rs.getString("ip"));
+                    String ua = rs.getString("user_agent");
+                    m.put("userAgent", ua != null && ua.length() > 160 ? ua.substring(0, 160) + "…" : ua);
+                    m.put("exceptionClass", rs.getString("exception_class"));
+                    m.put("message", rs.getString("message"));
+                    m.put("topClass", rs.getString("top_class"));
+                    m.put("topMethod", rs.getString("top_method"));
+                    m.put("topFile", rs.getString("top_file"));
+                    m.put("topLine", rs.getObject("top_line"));
+                    m.put("stackTrace", rs.getString("stack_trace"));
+                    m.put("createdAt", rs.getString("created_at"));
+                    return m;
+                },
+                pageArgs.toArray());
+
+        Map<String, Object> out = new LinkedHashMap<String, Object>();
+        out.put("total", total);
+        out.put("page", page);
+        out.put("size", size);
+        out.put("rows", rows);
+        out.put("statusOptions", ERROR_LOG_STATUS_OPTIONS);
+        return out;
+    }
+
+    private static final List<Map<String, String>> ERROR_LOG_STATUS_OPTIONS = Arrays.asList(
+            statusOpt("ALL", "全部"),
+            statusOpt("400", "400"),
+            statusOpt("500", "500"));
+
+    private static Map<String, String> statusOpt(String id, String label) {
+        Map<String, String> m = new LinkedHashMap<String, String>();
+        m.put("id", id);
+        m.put("label", label);
+        return m;
+    }
+
+    private static void appendErrorLogStatusFilter(StringBuilder where, List<Object> args, String statusFilter) {
+        if (statusFilter == null || statusFilter.trim().isEmpty() || "ALL".equalsIgnoreCase(statusFilter.trim())) {
+            return;
+        }
+        String s = statusFilter.trim();
+        if ("400".equals(s) || "500".equals(s)) {
+            try {
+                int code = Integer.parseInt(s);
+                where.append(" AND http_status = ?");
+                args.add(code);
+            } catch (NumberFormatException ignored) {
+            }
+        }
+    }
+
+    private static void appendErrorLogKeywordFilter(StringBuilder where, List<Object> args, String q) {
+        if (q == null || q.trim().isEmpty()) {
+            return;
+        }
+        String like = "%" + q.trim() + "%";
+        where.append(
+                " AND (IFNULL(path,'') LIKE ? OR IFNULL(exception_class,'') LIKE ? OR IFNULL(message,'') LIKE ? "
+                        + "OR IFNULL(top_class,'') LIKE ? OR IFNULL(top_method,'') LIKE ? OR IFNULL(ip,'') LIKE ?)");
+        args.add(like);
+        args.add(like);
+        args.add(like);
+        args.add(like);
+        args.add(like);
+        args.add(like);
     }
 
     /**

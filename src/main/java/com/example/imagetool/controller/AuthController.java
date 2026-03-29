@@ -1,5 +1,6 @@
 package com.example.imagetool.controller;
 
+import com.example.imagetool.common.ClientIpUtil;
 import com.example.imagetool.common.ErrorMessageUtil;
 import com.example.imagetool.common.Result;
 import com.example.imagetool.entity.User;
@@ -20,7 +21,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Proxy;
 import java.time.LocalDate;
@@ -174,14 +174,14 @@ public class AuthController {
             data.put("profile", profile);
             log.info("[GOOGLE_AUTH] 登录成功 userId={}, email={}, newUser={}", user.getId(), user.getEmail(), newUser);
             try {
-                loginAuditLogRepository.insert(newUser ? "GOOGLE_SIGNUP" : "GOOGLE_LOGIN", user.getId(), user.getEmail(), clientIp(request), userAgent(request));
+                loginAuditLogRepository.insert(newUser ? "GOOGLE_SIGNUP" : "GOOGLE_LOGIN", user.getId(), user.getEmail(), ClientIpUtil.resolve(request), userAgent(request));
             } catch (Exception auditEx) {
                 log.warn("login_audit_log 写入失败", auditEx);
             }
             return Result.success(data);
         } catch (Exception e) {
-            log.error("[GOOGLE_AUTH] 登录过程异常", e);
-            return Result.error(500, ErrorMessageUtil.fromThrowable(e));
+            log.error("[GOOGLE_AUTH] 登录过程异常 {}", ErrorMessageUtil.detailForLog(e), e);
+            return Result.error(500, ErrorMessageUtil.userFacing(e));
         }
     }
 
@@ -232,42 +232,19 @@ public class AuthController {
             data.put("token", sessionToken);
             data.put("profile", profile);
             try {
-                loginAuditLogRepository.insert(newUser ? "DEV_SIGNUP" : "DEV_LOGIN", user.getId(), user.getEmail(), clientIp(request), userAgent(request));
+                loginAuditLogRepository.insert(newUser ? "DEV_SIGNUP" : "DEV_LOGIN", user.getId(), user.getEmail(), ClientIpUtil.resolve(request), userAgent(request));
             } catch (Exception auditEx) {
                 log.warn("login_audit_log 写入失败", auditEx);
             }
             return Result.success(data);
         } catch (Exception e) {
-            log.error("dev 登录异常", e);
-            return Result.error(500, ErrorMessageUtil.fromThrowable(e));
+            log.error("dev 登录异常 {}", ErrorMessageUtil.detailForLog(e), e);
+            return Result.error(500, ErrorMessageUtil.userFacing(e));
         }
     }
 
     private static boolean isLocalRequest(HttpServletRequest request) {
-        if (request == null) {
-            return false;
-        }
-        String ip = request.getRemoteAddr();
-        if (ip == null || ip.isEmpty()) {
-            return false;
-        }
-        try {
-            InetAddress addr = InetAddress.getByName(ip);
-            return addr.isLoopbackAddress() || addr.isAnyLocalAddress();
-        } catch (Exception e) {
-            return false;
-        }
-    }
-
-    private static String clientIp(HttpServletRequest request) {
-        String ip = request.getHeader("X-Forwarded-For");
-        if (ip != null && ip.contains(",")) {
-            ip = ip.split(",")[0].trim();
-        }
-        if (ip == null || ip.isEmpty()) {
-            ip = request.getRemoteAddr();
-        }
-        return ip;
+        return ClientIpUtil.isLoopbackOrLocal(request);
     }
 
     private static String userAgent(HttpServletRequest request) {

@@ -1,5 +1,6 @@
 package com.example.imagetool.controller;
 
+import com.example.imagetool.common.ClientIpUtil;
 import com.example.imagetool.common.ErrorMessageUtil;
 import com.example.imagetool.common.Result;
 import com.example.imagetool.entity.User;
@@ -125,17 +126,19 @@ public class GenerateController {
             logGenerateFull(userId, "style", request, true, "ok", historyId, reqSnapshot, respJ);
             return Result.success(data);
         } catch (IllegalStateException e) {
-            String msg = ErrorMessageUtil.fromThrowable(e);
-            String respJ = snapResponse(503, msg, null);
-            logGenerateFull(userId, "style", request, false, "submit_error: " + e.getMessage(), null, reqSnapshot, respJ);
+            String userMsg = ErrorMessageUtil.userFacing(e);
+            String detail = ErrorMessageUtil.detailForLog(e);
+            String respJ = snapResponse(503, detail, null);
+            logGenerateFull(userId, "style", request, false, "submit_error: " + detail, null, reqSnapshot, respJ);
             log.error("Generate(style) submit error", e);
-            return Result.error(503, msg);
+            return Result.error(503, userMsg);
         } catch (Exception e) {
-            String msg = ErrorMessageUtil.fromThrowable(e);
-            String respJ = snapResponse(500, msg, null);
-            logGenerateFull(userId, "style", request, false, "submit_error: " + e.getMessage(), null, reqSnapshot, respJ);
+            String userMsg = ErrorMessageUtil.userFacing(e);
+            String detail = ErrorMessageUtil.detailForLog(e);
+            String respJ = snapResponse(500, detail, null);
+            logGenerateFull(userId, "style", request, false, "submit_error: " + detail, null, reqSnapshot, respJ);
             log.error("Generate(style) unexpected error", e);
-            return Result.error(500, msg);
+            return Result.error(500, userMsg);
         }
     }
 
@@ -191,17 +194,19 @@ public class GenerateController {
             logGenerateFull(userId, "random", request, true, "ok", historyId, reqSnapshot, respJ);
             return Result.success(data);
         } catch (IllegalStateException e) {
-            String msg = ErrorMessageUtil.fromThrowable(e);
-            String respJ = snapResponse(503, msg, null);
-            logGenerateFull(userId, "random", request, false, "submit_error: " + e.getMessage(), null, reqSnapshot, respJ);
+            String userMsg = ErrorMessageUtil.userFacing(e);
+            String detail = ErrorMessageUtil.detailForLog(e);
+            String respJ = snapResponse(503, detail, null);
+            logGenerateFull(userId, "random", request, false, "submit_error: " + detail, null, reqSnapshot, respJ);
             log.error("Generate(random) submit error", e);
-            return Result.error(503, msg);
+            return Result.error(503, userMsg);
         } catch (Exception e) {
-            String msg = ErrorMessageUtil.fromThrowable(e);
-            String respJ = snapResponse(500, msg, null);
-            logGenerateFull(userId, "random", request, false, "submit_error: " + e.getMessage(), null, reqSnapshot, respJ);
+            String userMsg = ErrorMessageUtil.userFacing(e);
+            String detail = ErrorMessageUtil.detailForLog(e);
+            String respJ = snapResponse(500, detail, null);
+            logGenerateFull(userId, "random", request, false, "submit_error: " + detail, null, reqSnapshot, respJ);
             log.error("Generate(random) unexpected error", e);
-            return Result.error(500, msg);
+            return Result.error(500, userMsg);
         }
     }
 
@@ -277,8 +282,8 @@ public class GenerateController {
                     .build();
             try (Response response = client.newCall(request).execute()) {
                 if (!response.isSuccessful() || response.body() == null) {
-                    log.error("Raphael history HTTP 失败: status={}, historyId={}", response.code(), historyId);
-                    return Result.error(502, "Raphael history API HTTP " + response.code());
+                    log.error("Raphael history HTTP 失败: status={}, historyId={}（前端 msg 仍为统一提示）", response.code(), historyId);
+                    return Result.error(502, ErrorMessageUtil.USER_BUSY);
                 }
                 String respStr = response.body().string();
                 Map<?, ?> map = mapper.readValue(respStr, Map.class);
@@ -289,8 +294,8 @@ public class GenerateController {
                 return Result.success("");
             }
         } catch (Exception e) {
-            log.error("Raphael history query error, historyId={}", historyId, e);
-            return Result.error(500, ErrorMessageUtil.fromThrowable(e));
+            log.error("Raphael history query error historyId={}, detail={}", historyId, ErrorMessageUtil.detailForLog(e), e);
+            return Result.error(500, ErrorMessageUtil.userFacing(e));
         }
     }
 
@@ -375,10 +380,8 @@ public class GenerateController {
     }
 
     private Long resolveDevUserIdFallback(HttpServletRequest request) {
-        String remoteIp = request != null ? request.getRemoteAddr() : "";
-        boolean localRequest = "127.0.0.1".equals(remoteIp)
-                || "::1".equals(remoteIp)
-                || "0:0:0:0:0:0:0:1".equals(remoteIp);
+        String remoteIp = request != null ? ClientIpUtil.resolve(request) : "";
+        boolean localRequest = ClientIpUtil.isLoopbackOrLocal(request);
         if (!devEnabled && !localRequest) {
             return null;
         }
@@ -414,13 +417,7 @@ public class GenerateController {
             String ip = null;
             String ua = null;
             if (request != null) {
-                ip = request.getHeader("X-Forwarded-For");
-                if (ip != null && ip.contains(",")) {
-                    ip = ip.split(",")[0].trim();
-                }
-                if (ip == null || ip.isEmpty()) {
-                    ip = request.getRemoteAddr();
-                }
+                ip = ClientIpUtil.resolve(request);
                 ua = request.getHeader("User-Agent");
             }
             generateLogRepository.insert(userId, type, ip, ua, success, reason, historyId, null, requestJson, responseJson);

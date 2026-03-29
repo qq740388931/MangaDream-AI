@@ -1,5 +1,6 @@
 package com.example.imagetool.config;
 
+import com.example.imagetool.common.ClientIpUtil;
 import com.example.imagetool.entity.User;
 import com.example.imagetool.repository.ApiAccessLogRepository;
 import com.example.imagetool.repository.UserRepository;
@@ -135,13 +136,7 @@ public class ApiAccessLoggingFilter extends OncePerRequestFilter {
             String method = request.getMethod();
             String query = request.getQueryString();
 
-            String ip = request.getHeader("X-Forwarded-For");
-            if (ip != null && ip.contains(",")) {
-                ip = ip.split(",")[0].trim();
-            }
-            if (ip == null || ip.isEmpty()) {
-                ip = request.getRemoteAddr();
-            }
+            String ip = ClientIpUtil.resolve(request);
             String ua = request.getHeader("User-Agent");
 
             Long userId = null;
